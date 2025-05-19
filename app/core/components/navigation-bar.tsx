@@ -251,26 +251,46 @@ export function NavigationBar({
         <div className="hidden h-full items-center gap-5 md:flex">
           {/* Main navigation links */}
           <Link
-            to="/blog"
+            to="/"
             viewTransition
             className="text-muted-foreground hover:text-foreground text-sm transition-colors"
           >
-            Blog
+            홈
           </Link>
           <Link
-            to="/contact"
+            to="/foods"
             viewTransition
             className="text-muted-foreground hover:text-foreground text-sm transition-colors"
           >
-            Contact
+            식당 지도
           </Link>
           <Link
-            to="/payments/checkout"
+            to="/foods/submit"
             viewTransition
             className="text-muted-foreground hover:text-foreground text-sm transition-colors"
           >
-            Payments
+            식당 제보
           </Link>
+          {/* 로그인 시 대시보드 */}
+          {name && (
+            <Link
+              to="/dashboard"
+              viewTransition
+              className="text-muted-foreground hover:text-foreground text-sm transition-colors"
+            >
+              내 활동
+            </Link>
+          )}
+          {/* 관리자 권한 시 어드민 */}
+          {name === "admin" && (
+            <Link
+              to="/admin"
+              viewTransition
+              className="text-muted-foreground hover:text-foreground text-sm transition-colors"
+            >
+              관리자
+            </Link>
+          )}
           
           <Separator orientation="vertical" />
           
@@ -305,14 +325,24 @@ export function NavigationBar({
         <SheetContent>
           <SheetHeader>
             <SheetClose asChild>
-              <Link to="/blog">Blog</Link>
+              <Link to="/">홈</Link>
             </SheetClose>
             <SheetClose asChild>
-              <Link to="/contact">Contact</Link>
+              <Link to="/foods">식당 지도</Link>
             </SheetClose>
             <SheetClose asChild>
-              <Link to="/payments/checkout">Payments</Link>
+              <Link to="/foods/submit">식당 제보</Link>
             </SheetClose>
+            {name && (
+              <SheetClose asChild>
+                <Link to="/dashboard">내 활동</Link>
+              </SheetClose>
+            )}
+            {name === "admin" && (
+              <SheetClose asChild>
+                <Link to="/admin">관리자</Link>
+              </SheetClose>
+            )}
           </SheetHeader>
           {loading ? (
             <div className="flex items-center">
