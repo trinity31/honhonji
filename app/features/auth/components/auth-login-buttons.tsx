@@ -35,6 +35,8 @@ import { KakaoLogo } from "./logos/kakao";
  * @param label - Provider name (e.g., "Google", "Apple")
  * @param href - URL path to the authentication flow for this provider
  */
+import { useTranslation } from "react-i18next";
+
 function AuthLoginButton({
   logo,
   label,
@@ -44,6 +46,7 @@ function AuthLoginButton({
   label: string;
   href: string;
 }) {
+  const { t } = useTranslation();
   return (
     <Button
       variant="outline"
@@ -52,7 +55,7 @@ function AuthLoginButton({
     >
       <Link to={href}>
         <span>{logo}</span>
-        <span>Continue with {label}</span>
+        <span>{t("login.continueWith", { provider: label })}</span>
       </Link>
     </Button>
   );

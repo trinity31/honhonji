@@ -89,10 +89,7 @@ export default function Home() {
   
   return (
     <div className="flex flex-col items-center justify-center gap-2.5">
-      {/* Main headline with responsive typography */}
-      <h1 className="text-4xl font-extrabold tracking-tight lg:text-6xl">
-        {t("home.title")}
-      </h1>
+
       
       {/* Subtitle */}
       <h2 className="text-2xl">{t("home.subtitle")}</h2>

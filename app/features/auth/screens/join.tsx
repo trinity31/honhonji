@@ -15,6 +15,7 @@ import type { Route } from "./+types/join";
 
 import { CheckCircle2Icon } from "lucide-react";
 import { useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { Form, Link, data } from "react-router";
 import { z } from "zod";
 
@@ -172,6 +173,7 @@ export async function action({ request }: Route.ActionArgs) {
  * @param actionData - Data returned from the form action, including errors or success status
  */
 export default function Join({ actionData }: Route.ComponentProps) {
+  const { t } = useTranslation();
   // Reference to the form element for resetting after successful submission
   const formRef = useRef<HTMLFormElement>(null);
   
@@ -187,10 +189,10 @@ export default function Join({ actionData }: Route.ComponentProps) {
       <Card className="w-full max-w-md">
         <CardHeader className="flex flex-col items-center">
           <CardTitle className="text-2xl font-semibold" role="heading">
-            Create an account
+            {t("join.title")}
           </CardTitle>
           <CardDescription className="text-base">
-            Enter your details to create an account
+            {t("join.description")}
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4">
@@ -201,14 +203,14 @@ export default function Join({ actionData }: Route.ComponentProps) {
           >
             <div className="flex flex-col items-start space-y-2">
               <Label htmlFor="name" className="flex flex-col items-start gap-1">
-                Name
+                {t("join.name")}
               </Label>
               <Input
                 id="name"
                 name="name"
                 required
                 type="text"
-                placeholder="Nico"
+                placeholder={t("join.namePlaceholder")}
               />
               {actionData &&
               "fieldErrors" in actionData &&
@@ -221,14 +223,14 @@ export default function Join({ actionData }: Route.ComponentProps) {
                 htmlFor="email"
                 className="flex flex-col items-start gap-1"
               >
-                Email
+                {t("join.email")}
               </Label>
               <Input
                 id="email"
                 name="email"
                 required
                 type="email"
-                placeholder="nico@supaplate.com"
+                placeholder={t("join.emailPlaceholder")}
               />
               {actionData &&
               "fieldErrors" in actionData &&
@@ -241,9 +243,9 @@ export default function Join({ actionData }: Route.ComponentProps) {
                 htmlFor="password"
                 className="flex flex-col items-start gap-1"
               >
-                Password
+                {t("join.password")}
                 <small className="text-muted-foreground">
-                  Must be at least 8 characters.
+                  {t("join.errors.passwordShort")}
                 </small>
               </Label>
               <Input
@@ -251,7 +253,7 @@ export default function Join({ actionData }: Route.ComponentProps) {
                 name="password"
                 required
                 type="password"
-                placeholder="Enter your password"
+                placeholder={t("join.password")}
               />
               {actionData &&
               "fieldErrors" in actionData &&
@@ -264,14 +266,14 @@ export default function Join({ actionData }: Route.ComponentProps) {
                 htmlFor="confirmPassword"
                 className="flex flex-col items-start gap-1"
               >
-                Confirm password
+                {t("join.passwordConfirm")}
               </Label>
               <Input
                 id="confirmPassword"
                 name="confirmPassword"
                 required
                 type="password"
-                placeholder="Confirm your password"
+                placeholder={t("join.passwordConfirm")}
               />
               {actionData &&
               "fieldErrors" in actionData &&
@@ -279,7 +281,7 @@ export default function Join({ actionData }: Route.ComponentProps) {
                 <FormErrors errors={actionData.fieldErrors.confirmPassword} />
               ) : null}
             </div>
-            <FormButton label="Create account" className="w-full" />
+            <FormButton label={t("join.submit") || "Create account"} className="w-full" />
             {actionData && "error" in actionData && actionData.error ? (
               <FormErrors errors={[actionData.error]} />
             ) : null}
@@ -287,28 +289,28 @@ export default function Join({ actionData }: Route.ComponentProps) {
             <div className="flex items-center gap-2">
               <Checkbox id="marketing" name="marketing" />
               <Label htmlFor="marketing" className="text-muted-foreground">
-                Sign up for marketing emails
+                {t("join.marketing", "Sign up for marketing emails")}
               </Label>
             </div>
             <div className="flex items-center gap-2">
               <Checkbox id="terms" name="terms" checked />
               <Label htmlFor="terms" className="text-muted-foreground">
                 <span>
-                  I have read and agree to the{" "}
+                  {t("join.termsPrefix", "I have read and agree to the ")}
                   <Link
                     to="/legal/terms-of-service"
                     viewTransition
                     className="text-muted-foreground text-underline hover:text-foreground underline transition-colors"
                   >
-                    Terms of Service
-                  </Link>{" "}
-                  and{" "}
+                    {t("join.termsOfService", "Terms of Service")}
+                  </Link>
+                  {t("join.and", " and ")}
                   <Link
                     to="/legal/privacy-policy"
                     viewTransition
                     className="text-muted-foreground hover:text-foreground text-underline underline transition-colors"
                   >
-                    Privacy Policy
+                    {t("join.privacyPolicy", "Privacy Policy")}
                   </Link>
                 </span>
               </Label>
@@ -319,10 +321,9 @@ export default function Join({ actionData }: Route.ComponentProps) {
                   className="size-4"
                   color="oklch(0.627 0.194 149.214)"
                 />
-                <AlertTitle>Account created!</AlertTitle>
+                <AlertTitle>{t("join.success", "Account created!")}</AlertTitle>
                 <AlertDescription className="text-green-700 dark:text-green-600">
-                  Before you can sign in, please verify your email. You can
-                  close this tab.
+                  {t("join.successDescription", "Before you can sign in, please verify your email. You can close this tab.")}
                 </AlertDescription>
               </Alert>
             ) : null}
@@ -332,14 +333,14 @@ export default function Join({ actionData }: Route.ComponentProps) {
       </Card>
       <div className="flex flex-col items-center justify-center text-sm">
         <p className="text-muted-foreground">
-          Already have an account?{" "}
+          {t("join.loginLinkPrefix", "Already have an account?")}
           <Link
             to="/login"
             viewTransition
             data-testid="form-signin-link"
             className="text-muted-foreground hover:text-foreground text-underline underline transition-colors"
           >
-            Sign in
+            {t("join.loginLink", "Sign in")}
           </Link>
         </p>
       </div>
