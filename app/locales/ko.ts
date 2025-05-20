@@ -6,6 +6,7 @@ const ko: Translation = {
   },
   home: {
     title: "혼혼지",
+    midtitle: "혼밥, 혼산책 지도",
     subtitle:
       "나만의 맛집, 나만의 길. 혼자여도 특별한 한 끼와 산책을 발견하세요!",
   },

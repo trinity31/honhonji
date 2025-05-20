@@ -1,9 +1,10 @@
 export type Translation = {
   login: {
     continueWith: string;
-  },
+  };
   home: {
     title: string;
+    midtitle: string;
     subtitle: string;
   };
   navigation: {

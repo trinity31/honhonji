@@ -7,11 +7,12 @@ trigger: always_on
 - React Router 7 as Framework Mode (Remix)
 - Created with "npx create-react-router@7.0.1 <my_app>"
 
-
 ## UI/UX
+
 - UI with ShadCN COmponent and Tailwind CSS
 - Use cn() function for conditional class
 - Use asChild to apply styles in childs
+- To add ShadCN Component, use "npx shadcn@latest add button"
 
 ## Code Structure
 
@@ -19,6 +20,7 @@ trigger: always_on
 - root.tsx: Route Module 을 렌더링할때 항상 먼저 root.tsx의 export default function 확인. Outlet: Placeholder 역할을 하는 component로 Route Module 이 렌더링되는 곳, Layout: App 을 감싸는 component, ErrorBoundary: error 발생시 렌더링되는 component
 - ScrollRestoration: 페이지 이동후 이전페이지로 돌아갈때 스크롤 위치
 - 동일한 구조의 UI frame에 조건적으로 다른 UI를 렌더링 해야 될 때는 layout + NavLink를 사용한다. 예시:
+
 ```
 layout("features/products/layouts/product-overview-layout.tsx", [
         route("/overview", "features/products/pages/product-overview-page.tsx"),
@@ -27,6 +29,7 @@ layout("features/products/layouts/product-overview-layout.tsx", [
         ]),
       ]),
 ```
+
 children이 들어갈 부분은 Outlet 태그 사용.
 
 ### Data Fetching
