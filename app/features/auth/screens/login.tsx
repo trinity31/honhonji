@@ -10,6 +10,7 @@ import type { Route } from "./+types/login";
 
 import { AlertCircle, Loader2Icon } from "lucide-react";
 import { useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { Form, Link, data, redirect, useFetcher } from "react-router";
 import { z } from "zod";
 
@@ -123,6 +124,9 @@ export async function action({ request }: Route.ActionArgs) {
  * @param actionData - Data returned from the form action, including any errors
  */
 export default function Login({ actionData }: Route.ComponentProps) {
+  // Initialize translation hook
+  const { t } = useTranslation();
+  
   // Reference to the form element for accessing form data
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -149,14 +153,14 @@ export default function Login({ actionData }: Route.ComponentProps) {
     });
   };
   return (
-    <div className="flex flex-col items-center justify-center gap-4">
-      <Card className="w-full max-w-md">
+    <div className="flex flex-col items-center justify-center gap-8 py-8">
+      <Card className="w-full max-w-md bg-primary/10 dark:bg-[#0e0e1b]">
         <CardHeader className="flex flex-col items-center">
           <CardTitle className="text-2xl font-semibold">
-            Sign into your account
+            {t("login.title")}
           </CardTitle>
           <CardDescription className="text-base">
-            Please enter your details
+            {t("login.description")}
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4">
@@ -170,14 +174,14 @@ export default function Login({ actionData }: Route.ComponentProps) {
                 htmlFor="email"
                 className="flex flex-col items-start gap-1"
               >
-                Email
+                {t("login.form.email")}
               </Label>
               <Input
                 id="email"
                 name="email"
                 required
                 type="email"
-                placeholder="i.e nico@supaplate.com"
+                placeholder={t("login.form.emailPlaceholder")}
               />
               {actionData &&
               "fieldErrors" in actionData &&
@@ -191,7 +195,7 @@ export default function Login({ actionData }: Route.ComponentProps) {
                   htmlFor="password"
                   className="flex flex-col items-start gap-1"
                 >
-                  Password
+                  {t("login.form.password")}
                 </Label>
                 <Link
                   to="/auth/forgot-password/reset"
@@ -199,7 +203,7 @@ export default function Login({ actionData }: Route.ComponentProps) {
                   tabIndex={-1}
                   viewTransition
                 >
-                  Forgot your password?
+                  {t("login.form.forgotPassword")}
                 </Link>
               </div>
               <Input
@@ -207,7 +211,7 @@ export default function Login({ actionData }: Route.ComponentProps) {
                 name="password"
                 required
                 type="password"
-                placeholder="Enter your password"
+                placeholder={t("login.form.passwordPlaceholder")}
               />
 
               {actionData &&
@@ -216,7 +220,14 @@ export default function Login({ actionData }: Route.ComponentProps) {
                 <FormErrors errors={actionData.fieldErrors.password} />
               ) : null}
             </div>
-            <FormButton label="Log in" className="w-full" />
+            <Button
+              type="submit"
+              className="w-full"
+              name="intent"
+              value="login"
+            >
+              {t("login.form.submit")}
+            </Button>
             {actionData && "error" in actionData ? (
               actionData.error === "Email not confirmed" ? (
                 <Alert variant="destructive" className="bg-destructive/10">
@@ -248,15 +259,14 @@ export default function Login({ actionData }: Route.ComponentProps) {
         </CardContent>
       </Card>
       <div className="flex flex-col items-center justify-center text-sm">
-        <p className="text-muted-foreground">
-          Don't have an account?{" "}
+        <p className="text-muted-foreground text-sm">
+          {t("login.noAccount")}{" "}
           <Link
-            to="/join"
+            to="/auth/join"
+            className="text-foreground hover:text-primary text-sm font-medium underline underline-offset-4"
             viewTransition
-            data-testid="form-signup-link"
-            className="text-muted-foreground hover:text-foreground text-underline underline transition-colors"
           >
-            Sign up
+            {t("login.signUp")}
           </Link>
         </p>
       </div>

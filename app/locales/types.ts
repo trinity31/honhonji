@@ -1,5 +1,17 @@
 export type Translation = {
   login: {
+    title: string;
+    description: string;
+    form: {
+      email: string;
+      emailPlaceholder: string;
+      password: string;
+      passwordPlaceholder: string;
+      forgotPassword: string;
+      submit: string;
+    };
+    noAccount: string;
+    signUp: string;
     continueWith: string;
   };
   home: {

@@ -185,8 +185,8 @@ export default function Join({ actionData }: Route.ComponentProps) {
     }
   }, [actionData]);
   return (
-    <div className="flex flex-col items-center justify-center gap-4">
-      <Card className="w-full max-w-md">
+    <div className="flex flex-col items-center justify-center gap-8 py-8">
+      <Card className="w-full max-w-md bg-primary/10 dark:bg-[#0e0e1b]">
         <CardHeader className="flex flex-col items-center">
           <CardTitle className="text-2xl font-semibold" role="heading">
             {t("join.title")}

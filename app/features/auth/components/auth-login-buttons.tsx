@@ -50,7 +50,7 @@ function AuthLoginButton({
   return (
     <Button
       variant="outline"
-      className="inline-flex items-center justify-center gap-2"
+      className="inline-flex items-center justify-center gap-2 hover:bg-primary/30 hover:border-primary/40 dark:hover:bg-primary/20 dark:hover:text-white transition-colors"
       asChild
     >
       <Link to={href}>

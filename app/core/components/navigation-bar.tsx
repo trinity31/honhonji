@@ -17,8 +17,9 @@
  * - Unauthenticated state with sign in/sign up buttons
  */
 import { CogIcon, HomeIcon, LogOutIcon, MenuIcon } from "lucide-react";
+import { Link, NavLink, useLocation } from "react-router";
 import { useTranslation } from "react-i18next";
-import { Link, NavLink } from "react-router";
+import { Theme, useTheme } from "remix-themes";
 
 // Import custom UI components
 import ThemeSwitcher from "./theme-switcher";
@@ -127,13 +128,15 @@ function UserMenu({
  * @returns Fragment containing sign in and sign up buttons
  */
 function AuthButtons() {
+  const { t } = useTranslation();
+  
   return (
     <>
       {/* Sign in button (less prominent) */}
       <Button variant="ghost" asChild>
         <SheetClose asChild>
           <Link to="/login" viewTransition>
-            Sign in
+            {t("login.signIn", "로그인")}
           </Link>
         </SheetClose>
       </Button>
@@ -142,7 +145,7 @@ function AuthButtons() {
       <Button variant="default" asChild>
         <SheetClose asChild>
           <Link to="/join" viewTransition>
-            Sign up
+            {t("join.signUp", "회원가입")}
           </Link>
         </SheetClose>
       </Button>

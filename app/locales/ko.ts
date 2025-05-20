@@ -2,6 +2,18 @@ import type { Translation } from "./types";
 
 const ko: Translation = {
   login: {
+    title: "로그인",
+    description: "계정에 로그인하세요",
+    form: {
+      email: "이메일",
+      emailPlaceholder: "example@example.com",
+      password: "비밀번호",
+      passwordPlaceholder: "비밀번호를 입력하세요",
+      forgotPassword: "비밀번호를 잊으셨나요?",
+      submit: "로그인"
+    },
+    noAccount: "계정이 없으신가요?",
+    signUp: "회원가입",
     continueWith: "{{provider}}로 계속하기",
   },
   home: {
