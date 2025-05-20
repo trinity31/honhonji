@@ -18,7 +18,7 @@
  */
 import { CogIcon, HomeIcon, LogOutIcon, MenuIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router";
+import { Link, NavLink } from "react-router";
 
 // Import custom UI components
 import ThemeSwitcher from "./theme-switcher";
@@ -243,53 +243,71 @@ export function NavigationBar({
     >
       <div className="mx-auto flex h-full w-full max-w-screen-2xl items-center justify-between py-3">
         {/* Application logo/title with link to home */}
-        <Link to="/">
+        <Link to="/" className="flex items-center gap-2">
+          <div className="relative h-6 w-6">
+            <img 
+              src="/logo_light.png" 
+              alt="" 
+              className="h-full w-full dark:hidden" 
+            />
+            <img 
+              src="/logo_dark.png" 
+              alt="" 
+              className="hidden h-full w-full dark:block" 
+            />
+          </div>
           <h1 className="text-lg font-extrabold">{t("home.title")}</h1>
         </Link>
         
         {/* Desktop navigation menu (hidden on mobile) */}
         <div className="hidden h-full items-center gap-5 md:flex">
           {/* Main navigation links */}
-          <Link
+          <NavLink
             to="/"
-            viewTransition
-            className="text-muted-foreground hover:text-foreground text-sm transition-colors"
+            end
+            className={({ isActive }: { isActive: boolean }) =>
+              `text-sm transition-colors ${isActive ? 'text-foreground font-medium' : 'text-muted-foreground hover:text-foreground'}`
+            }
           >
             홈
-          </Link>
-          <Link
+          </NavLink>
+          <NavLink
             to="/foods"
-            viewTransition
-            className="text-muted-foreground hover:text-foreground text-sm transition-colors"
+            className={({ isActive }: { isActive: boolean }) =>
+              `text-sm transition-colors ${isActive ? 'text-foreground font-medium' : 'text-muted-foreground hover:text-foreground'}`
+            }
           >
             식당 지도
-          </Link>
-          <Link
+          </NavLink>
+          <NavLink
             to="/foods/submit"
-            viewTransition
-            className="text-muted-foreground hover:text-foreground text-sm transition-colors"
+            className={({ isActive }: { isActive: boolean }) =>
+              `text-sm transition-colors ${isActive ? 'text-foreground font-medium' : 'text-muted-foreground hover:text-foreground'}`
+            }
           >
             식당 제보
-          </Link>
+          </NavLink>
           {/* 로그인 시 대시보드 */}
           {name && (
-            <Link
+            <NavLink
               to="/dashboard"
-              viewTransition
-              className="text-muted-foreground hover:text-foreground text-sm transition-colors"
+              className={({ isActive }: { isActive: boolean }) =>
+                `text-sm transition-colors ${isActive ? 'text-foreground font-medium' : 'text-muted-foreground hover:text-foreground'}`
+              }
             >
               내 활동
-            </Link>
+            </NavLink>
           )}
           {/* 관리자 권한 시 어드민 */}
           {name === "admin" && (
-            <Link
+            <NavLink
               to="/admin"
-              viewTransition
-              className="text-muted-foreground hover:text-foreground text-sm transition-colors"
+              className={({ isActive }: { isActive: boolean }) =>
+                `text-sm transition-colors ${isActive ? 'text-foreground font-medium' : 'text-muted-foreground hover:text-foreground'}`
+              }
             >
               관리자
-            </Link>
+            </NavLink>
           )}
           
           <Separator orientation="vertical" />

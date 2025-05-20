@@ -16,14 +16,17 @@ import type { Route } from "./+types/home";
 import {
   Coffee,
   Filter,
+  Leaf,
   MapPin,
   Menu,
   Moon,
   Pizza,
+  Salad,
   Search,
   Star,
   Sun,
   Utensils,
+  Zap,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
@@ -114,28 +117,25 @@ export default function Home() {
   return (
     <div className="flex min-h-screen flex-col bg-white dark:bg-slate-950">
       {/* Hero Section */}
-      <section className="bg-primary/10 dark:bg-primary/5 w-full pt-0 pb-2 md:pb-3">
-        <div className="container px-4 md:px-6">
-          <div className="grid gap-6 lg:grid-cols-[1fr_400px] lg:gap-12 xl:grid-cols-[1fr_600px]">
+      <section className="bg-primary/10 w-full pt-0 pb-2 md:pb-3 dark:bg-[#0e0e1b]">
+        <div className="w-full">
+          <div className="grid w-full grid-cols-1 gap-6 overflow-hidden px-2 py-8 md:px-4 md:py-12 lg:grid-cols-[1fr_400px] lg:gap-8 lg:px-6 xl:grid-cols-[1fr_600px]">
             <div className="flex flex-col justify-center space-y-4">
               <div className="space-y-2">
                 <h1 className="text-primary text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
                   {t("home.midtitle")}
                 </h1>
-                <h2 className="text-foreground text-xl font-semibold tracking-tighter sm:text-4xl md:text-5xl">
-                  혼자여도 특별한 한 끼와 식책을 발견하세요!
-                </h2>
-                <p className="text-muted-foreground max-w-[600px] md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
+                <p className="text-foreground max-w-full text-xl font-medium whitespace-normal sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl">
                   {t("home.subtitle")}
                 </p>
               </div>
               <div className="flex flex-col gap-2 min-[400px]:flex-row">
-                <Button className="bg-primary hover:bg-primary/90 gap-1">
-                  <MapPin className="h-4 w-4" />내 주변 식당 찾기
+                <Button className="bg-primary hover:bg-primary/90 gap-1 text-white">
+                  <MapPin className="h-4 w-4 text-white" />내 주변 식당 찾기
                 </Button>
                 <Button
                   variant="outline"
-                  className="border-secondary text-secondary hover:bg-secondary/10"
+                  className="border-secondary text-secondary hover:bg-secondary/10 hover:text-orange-500 dark:hover:text-white"
                 >
                   추천 식당 둘러보기
                 </Button>
@@ -170,31 +170,13 @@ export default function Home() {
       </section>
 
       {/* Category Pills */}
-      <div className="container px-4 py-4 md:px-6">
-        <div className="scrollbar-hide flex gap-2 overflow-x-auto pb-2">
+      <div className="w-full px-4 py-3 md:px-6">
+        <div className="flex flex-wrap gap-2">
           <Badge
             variant="outline"
-            className="rounded-full border-red-200 bg-red-100 px-3 py-1 text-red-600 hover:bg-red-200"
+            className="rounded-full border-orange-200 bg-orange-100 px-3 py-1 text-orange-600 hover:bg-orange-200"
           >
-            <Utensils className="mr-1 h-3 w-3" /> 한식
-          </Badge>
-          <Badge
-            variant="outline"
-            className="rounded-full border-blue-200 bg-blue-100 px-3 py-1 text-blue-600 hover:bg-blue-200"
-          >
-            <Coffee className="mr-1 h-3 w-3" /> 카페
-          </Badge>
-          <Badge
-            variant="outline"
-            className="rounded-full border-yellow-200 bg-yellow-100 px-3 py-1 text-yellow-600 hover:bg-yellow-200"
-          >
-            <Pizza className="mr-1 h-3 w-3" /> 양식
-          </Badge>
-          <Badge
-            variant="outline"
-            className="rounded-full border-green-200 bg-green-100 px-3 py-1 text-green-600 hover:bg-green-200"
-          >
-            혼밥 맛집
+            가성비
           </Badge>
           <Badge
             variant="outline"
@@ -204,39 +186,59 @@ export default function Home() {
           </Badge>
           <Badge
             variant="outline"
-            className="rounded-full border-orange-200 bg-orange-100 px-3 py-1 text-orange-600 hover:bg-orange-200"
+            className="rounded-full border-green-200 bg-green-100 px-3 py-1 text-green-600 hover:bg-green-200"
           >
-            가성비
+            <Zap className="mr-1 h-3 w-3" /> 콘센트
+          </Badge>
+          <Badge
+            variant="outline"
+            className="rounded-full border-yellow-200 bg-yellow-100 px-3 py-1 text-yellow-600 hover:bg-yellow-200"
+          >
+            <Sun className="mr-1 h-3 w-3" /> 아침식사
+          </Badge>
+          <Badge
+            variant="outline"
+            className="rounded-full border-indigo-200 bg-indigo-100 px-3 py-1 text-indigo-600 hover:bg-indigo-200"
+          >
+            <Moon className="mr-1 h-3 w-3" /> 심야영업
+          </Badge>
+          <Badge
+            variant="outline"
+            className="rounded-full border-pink-200 bg-pink-100 px-3 py-1 text-pink-600 hover:bg-pink-200"
+          >
+            <Salad className="mr-1 h-3 w-3" /> 다이어트
           </Badge>
           <Badge
             variant="outline"
             className="rounded-full border-teal-200 bg-teal-100 px-3 py-1 text-teal-600 hover:bg-teal-200"
           >
-            신규 오픈
+            <Leaf className="mr-1 h-3 w-3" /> 비건
           </Badge>
         </div>
       </div>
 
       {/* Main Content with Map */}
-      <main className="flex-1">
-        <div className="container px-4 py-6 md:px-6 md:py-8">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-primary text-2xl font-bold">주변 혼밥 식당</h2>
-            <div className="flex items-center gap-2">
+      <main className="w-full flex-1">
+        <div className="w-full px-4 py-6 md:px-6 md:py-8">
+          <div className="mb-4 flex items-center justify-between gap-2">
+            <h2 className="text-primary text-xl font-bold whitespace-nowrap sm:text-2xl">
+              주변 혼밥 식당
+            </h2>
+            <div className="flex items-center gap-1 sm:gap-2">
               <Button
                 variant="outline"
                 size="sm"
-                className="border-secondary text-secondary hover:bg-secondary/10 gap-1"
+                className="border-secondary text-secondary hover:bg-secondary/10 gap-1 px-2 sm:px-3"
               >
-                <Filter className="h-4 w-4" />
-                필터
+                <Filter className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">필터</span>
               </Button>
-              <div className="relative">
-                <Search className="text-muted-foreground absolute top-2.5 left-2.5 h-4 w-4" />
+              <div className="relative min-w-0">
+                <Search className="text-muted-foreground absolute top-2.5 left-2.5 h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 <Input
                   type="search"
-                  placeholder="식당 검색..."
-                  className="w-full rounded-md pl-8 md:w-[200px] lg:w-[300px]"
+                  placeholder="검색..."
+                  className="w-full min-w-[120px] rounded-md pr-2 pl-7 text-sm sm:pr-3 sm:pl-8 sm:text-base md:w-[160px] lg:w-[200px]"
                 />
               </div>
             </div>
