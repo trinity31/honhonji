@@ -1,9 +1,9 @@
 /**
  * Application Routes Configuration
- * 
+ *
  * This file defines all routes for the application using React Router's
  * file-based routing system. Routes are organized by feature and access level.
- * 
+ *
  * The structure uses layouts for shared UI elements and prefixes for route grouping.
  * This approach creates a hierarchical routing system that's both maintainable and scalable.
  */
@@ -70,6 +70,12 @@ export default [
             "features/auth/screens/social/complete.tsx",
           ),
         ]),
+      ]),
+
+      // Map related routes
+      ...prefix("/map", [
+        index("features/map/map-page.tsx"),
+        // Add more map related routes here
       ]),
     ]),
     layout("core/layouts/private.layout.tsx", { id: "private-auth" }, [

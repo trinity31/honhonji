@@ -275,20 +275,20 @@ export function NavigationBar({
             홈
           </NavLink>
           <NavLink
-            to="/foods"
+            to="/map"
             className={({ isActive }: { isActive: boolean }) =>
               `text-sm transition-colors ${isActive ? 'text-foreground font-medium' : 'text-muted-foreground hover:text-foreground'}`
             }
           >
-            식당 지도
+            지도
           </NavLink>
           <NavLink
-            to="/foods/submit"
+            to="/map/submit"
             className={({ isActive }: { isActive: boolean }) =>
               `text-sm transition-colors ${isActive ? 'text-foreground font-medium' : 'text-muted-foreground hover:text-foreground'}`
             }
           >
-            식당 제보
+            장소 제보
           </NavLink>
           {/* 로그인 시 대시보드 */}
           {name && (
