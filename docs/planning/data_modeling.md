@@ -6,8 +6,8 @@
 
 ## 1. 시스템의 핵심 엔터티 (Entities)
 
-* `User`
-* `Restaurant`
+* `Profile`
+* `Place`
 * `Review`
 * `Submission` (제보)
 * `Favorite` (찜한 식당)
@@ -29,9 +29,10 @@
 
 ---
 
-### **Restaurant**
+### **Place**
 
 * `id` (UUID)
+* `type` (enum: restaurant, walk, etc)
 * `name` (string)
 * `address` (string)
 * `lat` (float)
@@ -39,8 +40,6 @@
 * `category` (string) — 예: 한식, 돈까스, 일식 등
 * `price_level` (enum: cheap, moderate, expensive) — 착한 가격 태그 기반
 * `honbab_score` (int, 0\~100) — 혼밥 친화도 점수
-* `bar_seat` (boolean)
-* `quiet` (boolean)
 * `image_url` (string, optional)
 * `source` (enum: admin, user\_submission)
 * `created_at` (timestamp)
@@ -52,11 +51,9 @@
 
 * `id` (UUID)
 * `user_id` (foreign key → User)
-* `restaurant_id` (foreign key → Restaurant)
+* `place_id` (foreign key → Place)
 * `rating` (int, 1\~5)
 * `text` (text)
-* `is_affordable` (boolean)
-* `is_solo_friendly` (boolean)
 * `created_at` (timestamp)
 
 ---
@@ -65,15 +62,14 @@
 
 * `id` (UUID)
 * `user_id` (nullable → 익명 제보 허용)
-* `restaurant_name` (string)
+* `place_type` (enum: restaurant, walk, etc)
+* `place_name` (string)
 * `address` (string)
 * `lat` (float, optional)
 * `lng` (float, optional)
 * `notes` (text)ㅌ
 * `status` (enum: pending, approved, rejected)
-* `review_suggestion` (jsonb, optional)ㅌ₩
 * `created_at` (timestamp)
-* `moderated_at` (timestamp, optional)
 
 ---
 
@@ -81,17 +77,35 @@
 
 * `id` (UUID)
 * `user_id` (foreign key → User)
-* `restaurant_id` (foreign key → Restaurant)
+* `place_id` (foreign key → Place)
 * `created_at` (timestamp)
+
+
+### **Tag**
+
+* `id` (UUID)
+* `key` (string)
+* `label` (string)
+* `description` (string)
+* `type` (enum: restaurant, walk, etc)
+* `is_active` (boolean)
+* `created_at` (timestamp)
+
+### **PlaceTag**
+
+* `id` (UUID)
+* `place_id` (foreign key → Place)
+* `tag_id` (foreign key → Tag)
+
 
 ---
 
 ## 3. 관계 정리
 
 * **1 User → many Review**
-* **1 Restaurant → many Review**
+* **1 Place → many Review**
 * **1 User → many Submission**
-* **1 Restaurant ← many Submission** (간접적으로 전환될 수 있음)
+* **1 Place ← many Submission** (간접적으로 전환될 수 있음)
 * **1 User → many Favorite**
 
 ---
@@ -101,7 +115,7 @@
 | Entity     | Create               | Read       | Update         | Delete    |
 | ---------- | -------------------- | ---------- | -------------- | --------- |
 | User       | ✅                    | ✅ (Self)   | ✅ (Self/Admin) | ✅ (Self)  |
-| Restaurant | ✅ (Admin/Submission) | ✅ (Public) | ✅ (Admin)      | ✅ (Admin) |
+| Place      | ✅ (Admin/Submission) | ✅ (Public) | ✅ (Admin)      | ✅ (Admin) |
 | Review     | ✅                    | ✅ (Public) | ✅ (Owner)      | ✅ (Owner) |
 | Submission | ✅                    | ✅ (Admin)  | ✅ (Admin)      | ✅ (Admin) |
 | Favorite   | ✅                    | ✅ (Self)   | ❌              | ✅ (Self)  |
@@ -112,11 +126,11 @@
 
 * ✅ **리뷰는 유저당 한 식당에 1개만 작성 가능**, 수정 가능
 * ✅ **익명 제보 가능**, 단 `user_id`가 없으면 spam 필터링 필요
-* ✅ **Submission**의 상태가 `approved`일 때만 Restaurant로 전환
-* ✅ **리뷰 작성 시 필수 체크박스 (가성비, 혼밥 가능)** 포함되어야 저장 가능
+* ✅ **Submission**의 상태가 `approved`일 때만 Place로 전환
 * ✅ **Admin만** `/admin` 경로 접근 가능
-* ✅ **Restaurant 생성 시** 주소 + lat/lng 중복 검증 필요
+* ✅ **Place 생성 시** 주소 + lat/lng 중복 검증 필요
 * ✅ **Soft Delete** 정책 미도입 (현재 MVP에서는 즉시 삭제 가능)
+* ✅ **UNIQUE (place_id, tag_id)**
 
 ---
 
