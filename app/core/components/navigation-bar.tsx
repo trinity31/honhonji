@@ -283,7 +283,7 @@ export function NavigationBar({
             지도
           </NavLink>
           <NavLink
-            to="/map/submit"
+            to="/places/report"
             className={({ isActive }: { isActive: boolean }) =>
               `text-sm transition-colors ${isActive ? 'text-foreground font-medium' : 'text-muted-foreground hover:text-foreground'}`
             }
@@ -349,10 +349,10 @@ export function NavigationBar({
               <Link to="/">홈</Link>
             </SheetClose>
             <SheetClose asChild>
-              <Link to="/foods">식당 지도</Link>
+              <Link to="/map">지도</Link>
             </SheetClose>
             <SheetClose asChild>
-              <Link to="/foods/submit">식당 제보</Link>
+              <Link to="/places/report">장소 제보</Link>
             </SheetClose>
             {name && (
               <SheetClose asChild>

@@ -77,6 +77,12 @@ export default [
         index("features/map/map-page.tsx"),
         // Add more map related routes here
       ]),
+      
+      // Places routes
+      ...prefix("/places", [
+        route("/report", "features/places/report/report-page.tsx"),
+        // Add more places related routes here
+      ]),
     ]),
     layout("core/layouts/private.layout.tsx", { id: "private-auth" }, [
       ...prefix("/auth", [
