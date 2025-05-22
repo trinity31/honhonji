@@ -153,7 +153,8 @@ export default function Login({ actionData }: Route.ComponentProps) {
     });
   };
   return (
-    <div className="flex flex-col items-center justify-center gap-8 py-8">
+    <div className="flex min-h-screen w-full items-center justify-center p-4">
+      <div className="flex w-full max-w-md flex-col items-center gap-8">
       <Card className="w-full max-w-md bg-primary/10 dark:bg-[#0e0e1b]">
         <CardHeader className="flex flex-col items-center">
           <CardTitle className="text-2xl font-semibold">
@@ -269,6 +270,7 @@ export default function Login({ actionData }: Route.ComponentProps) {
             {t("login.signUp")}
           </Link>
         </p>
+      </div>
       </div>
     </div>
   );

@@ -13,13 +13,11 @@
  * This modular approach allows for easy addition or removal of authentication methods
  * without modifying the main authentication screens.
  */
-import { LockIcon, MailIcon, PhoneIcon } from "lucide-react";
 import { Link } from "react-router";
 
 import { Button } from "~/core/components/ui/button";
 
 import { AppleLogo } from "./logos/apple";
-import { GithubLogo } from "./logos/github";
 import { GoogleLogo } from "./logos/google";
 import { KakaoLogo } from "./logos/kakao";
 
@@ -78,35 +76,6 @@ function Divider() {
   );
 }
 
-/**
- * Passwordless authentication options
- * 
- * This component renders buttons for passwordless authentication methods:
- * - OTP (One-Time Password) authentication
- * - Magic Link email authentication
- * 
- * These methods provide alternatives to traditional password-based or social login
- * approaches, enhancing accessibility and security.
- * 
- * Note: The underscore prefix (_SignInButtons) indicates this is a private component
- * intended for internal use within this module.
- */
-function _SignInButtons() {
-  return (
-    <>
-      <AuthLoginButton
-        logo={<LockIcon className="size-4 scale-110 dark:text-white" />}
-        label="OTP"
-        href="/auth/otp/start"
-      />
-      <AuthLoginButton
-        logo={<MailIcon className="size-4 scale-110 dark:text-white" />}
-        label="Magic Link"
-        href="/auth/magic-link"
-      />
-    </>
-  );
-}
 
 /**
  * Social login authentication options
@@ -128,11 +97,6 @@ function SocialLoginButtons() {
         logo={<GoogleLogo className="size-4" />}
         label="Google"
         href="/auth/social/start/google"
-      />
-      <AuthLoginButton
-        logo={<GithubLogo className="size-4 scale-125 dark:text-white" />}
-        label="Github"
-        href="/auth/social/start/github"
       />
       <AuthLoginButton
         logo={<AppleLogo className="size-4 scale-150 dark:text-white" />}
@@ -161,11 +125,7 @@ function SocialLoginButtons() {
  */
 export function SignInButtons() {
   return (
-    <>
-      <Divider />
-      <SocialLoginButtons />
-      <_SignInButtons />
-    </>
+    <SocialLoginButtons />
   );
 }
 
