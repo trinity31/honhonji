@@ -17,8 +17,8 @@ import {
 import { useState } from "react";
 
 import { Badge } from "~/core/components/ui/badge";
-import { RadioGroup, RadioGroupItem } from "~/core/components/ui/radio-group";
 import { Label } from "~/core/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "~/core/components/ui/radio-group";
 import { cn } from "~/core/lib/utils";
 
 export const loader = async ({ request }: Route.LoaderArgs) => {
@@ -75,13 +75,13 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
   };
 };
 
-type PlaceType = 'restaurant' | 'walking_trail';
+type PlaceType = "restaurant" | "walking_trail";
 
 export default function ReportPlacePage({ loaderData }: Route.ComponentProps) {
   const [selectedTags, setSelectedTags] = useState<
     Array<{ id: string; label: string }>
   >([]);
-  const [placeType, setPlaceType] = useState<PlaceType>('restaurant');
+  const [placeType, setPlaceType] = useState<PlaceType>("restaurant");
   const { tags } = loaderData;
 
   const iconComponents: Record<string, LucideIcon> = {
@@ -121,30 +121,26 @@ export default function ReportPlacePage({ loaderData }: Route.ComponentProps) {
             name="placeName"
             required
             className="w-full rounded-md border p-2"
-            placeholder="예) 맛있는 집"
+            placeholder="예) 혼밥카페 연남점"
           />
         </div>
 
         {/* 장소 타입 선택 */}
         <div className="space-y-2">
           <Label className="text-sm font-medium">장소 타입</Label>
-          <RadioGroup 
-            defaultValue="restaurant" 
+          <RadioGroup
+            defaultValue="restaurant"
             className="flex space-x-4"
             value={placeType}
             onValueChange={(value: PlaceType) => setPlaceType(value)}
           >
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="restaurant" id="restaurant" />
-              <Label htmlFor="restaurant">
-                식당
-              </Label>
+              <Label htmlFor="restaurant">식당</Label>
             </div>
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="walking_trail" id="walking_trail" />
-              <Label htmlFor="walking_trail">
-                산책로
-              </Label>
+              <Label htmlFor="walking_trail">산책로</Label>
             </div>
           </RadioGroup>
           <input type="hidden" name="placeType" value={placeType} />
@@ -197,11 +193,11 @@ export default function ReportPlacePage({ loaderData }: Route.ComponentProps) {
               name="address"
               readOnly
               className="flex-1 rounded-md border p-2"
-              placeholder="주소 검색 버튼을 눌러주세요"
+              placeholder="주소를 검색하려면 오른쪽 버튼을 눌러주세요"
             />
             <button
               type="button"
-              className="rounded-md bg-gray-700 px-4 py-2 text-white hover:bg-gray-600 dark:bg-gray-800 dark:hover:bg-gray-700 transition-colors"
+              className="rounded-md bg-gray-700 px-4 py-2 text-white transition-colors hover:bg-gray-600 dark:bg-gray-800 dark:hover:bg-gray-700"
               onClick={() => {
                 // TODO: 주소 검색 기능 구현
                 alert("주소 검색 기능이 곧 추가될 예정입니다.");
@@ -222,7 +218,7 @@ export default function ReportPlacePage({ loaderData }: Route.ComponentProps) {
             id="detailAddress"
             name="detailAddress"
             className="w-full rounded-md border p-2"
-            placeholder="상세 주소를 입력해주세요"
+            placeholder="건물 이름이나 층수까지 입력해 주세요"
           />
         </div>
 
@@ -236,7 +232,7 @@ export default function ReportPlacePage({ loaderData }: Route.ComponentProps) {
             name="content"
             rows={4}
             className="w-full rounded-md border p-2"
-            placeholder="이 장소에 대한 간단한 설명이나 추천 이유를 적어주세요"
+            placeholder="왜 이 장소를 추천하고 싶은지 간단히 써 주세요"
           ></textarea>
         </div>
 
@@ -244,9 +240,9 @@ export default function ReportPlacePage({ loaderData }: Route.ComponentProps) {
         <div className="pt-4">
           <button
             type="submit"
-            className="w-full rounded-md bg-primary px-4 py-3 font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+            className="bg-primary text-primary-foreground hover:bg-primary/90 w-full rounded-md px-4 py-3 font-medium transition-colors"
           >
-            제보하기
+            추천하기
           </button>
         </div>
       </form>

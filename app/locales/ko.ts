@@ -10,7 +10,7 @@ const ko: Translation = {
       password: "비밀번호",
       passwordPlaceholder: "비밀번호를 입력하세요",
       forgotPassword: "비밀번호를 잊으셨나요?",
-      submit: "로그인"
+      submit: "로그인",
     },
     noAccount: "계정이 없으신가요?",
     signUp: "회원가입",
@@ -19,8 +19,7 @@ const ko: Translation = {
   home: {
     title: "혼혼지",
     midtitle: "혼밥, 혼산책 지도",
-    subtitle:
-      "나만의 맛집, 나만의 길. 혼자여도 특별한 한 끼와 산책을 발견하세요!",
+    subtitle: "혼자 가기 좋은 맛집과 산책길을 한눈에 찾을 수 있어요.",
   },
   navigation: {
     kr: "한국어",
@@ -34,8 +33,8 @@ const ko: Translation = {
     email: "이메일",
     password: "비밀번호",
     passwordConfirm: "비밀번호 확인",
-    submit: "계정 만들기",
-    loginLink: "이미 계정이 있으신가요? 로그인",
+    submit: "가입하기",
+    loginLink: "로그인",
     errors: {
       required: "필수 입력 항목입니다.",
       invalidEmail: "유효한 이메일 주소를 입력하세요.",
@@ -52,9 +51,9 @@ const ko: Translation = {
     termsOfService: "이용약관",
     and: " 및 ",
     privacyPolicy: "개인정보 처리방침",
-    successDescription: "로그인 전에 이메일을 인증해 주세요. 이 탭을 닫으셔도 됩니다.",
+    successDescription:
+      "로그인 전에 이메일을 인증해 주세요. 이 탭을 닫으셔도 됩니다.",
     loginLinkPrefix: "이미 계정이 있으신가요?",
-
   },
 };
 

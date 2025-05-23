@@ -126,7 +126,7 @@ export async function action({ request }: Route.ActionArgs) {
 export default function Login({ actionData }: Route.ComponentProps) {
   // Initialize translation hook
   const { t } = useTranslation();
-  
+
   // Reference to the form element for accessing form data
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -155,122 +155,122 @@ export default function Login({ actionData }: Route.ComponentProps) {
   return (
     <div className="flex min-h-screen w-full items-center justify-center p-4">
       <div className="flex w-full max-w-md flex-col items-center gap-8">
-      <Card className="w-full max-w-md bg-primary/10 dark:bg-[#0e0e1b]">
-        <CardHeader className="flex flex-col items-center">
-          <CardTitle className="text-2xl font-semibold">
-            {t("login.title")}
-          </CardTitle>
-          <CardDescription className="text-base">
+        <Card className="bg-primary/10 w-full max-w-md dark:bg-[#0e0e1b]">
+          <CardHeader className="flex flex-col items-center">
+            <CardTitle className="text-2xl font-semibold">
+              {t("login.title")}
+            </CardTitle>
+            {/* <CardDescription className="text-base">
             {t("login.description")}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4">
-          <Form
-            className="flex w-full flex-col gap-5"
-            method="post"
-            ref={formRef}
-          >
-            <div className="flex flex-col items-start space-y-2">
-              <Label
-                htmlFor="email"
-                className="flex flex-col items-start gap-1"
-              >
-                {t("login.form.email")}
-              </Label>
-              <Input
-                id="email"
-                name="email"
-                required
-                type="email"
-                placeholder={t("login.form.emailPlaceholder")}
-              />
-              {actionData &&
-              "fieldErrors" in actionData &&
-              actionData.fieldErrors.email ? (
-                <FormErrors errors={actionData.fieldErrors.email} />
-              ) : null}
-            </div>
-            <div className="flex flex-col items-start space-y-2">
-              <div className="flex w-full items-center justify-between">
+          </CardDescription> */}
+          </CardHeader>
+          <CardContent className="grid gap-4">
+            <Form
+              className="flex w-full flex-col gap-5"
+              method="post"
+              ref={formRef}
+            >
+              <div className="flex flex-col items-start space-y-2">
                 <Label
-                  htmlFor="password"
+                  htmlFor="email"
                   className="flex flex-col items-start gap-1"
                 >
-                  {t("login.form.password")}
+                  {t("login.form.email")}
                 </Label>
-                <Link
-                  to="/auth/forgot-password/reset"
-                  className="text-muted-foreground text-underline hover:text-foreground self-end text-sm underline transition-colors"
-                  tabIndex={-1}
-                  viewTransition
-                >
-                  {t("login.form.forgotPassword")}
-                </Link>
+                <Input
+                  id="email"
+                  name="email"
+                  required
+                  type="email"
+                  placeholder={t("login.form.emailPlaceholder")}
+                />
+                {actionData &&
+                "fieldErrors" in actionData &&
+                actionData.fieldErrors.email ? (
+                  <FormErrors errors={actionData.fieldErrors.email} />
+                ) : null}
               </div>
-              <Input
-                id="password"
-                name="password"
-                required
-                type="password"
-                placeholder={t("login.form.passwordPlaceholder")}
-              />
+              <div className="flex flex-col items-start space-y-2">
+                <div className="flex w-full items-center justify-between">
+                  <Label
+                    htmlFor="password"
+                    className="flex flex-col items-start gap-1"
+                  >
+                    {t("login.form.password")}
+                  </Label>
+                  <Link
+                    to="/auth/forgot-password/reset"
+                    className="text-muted-foreground text-underline hover:text-foreground self-end text-sm underline transition-colors"
+                    tabIndex={-1}
+                    viewTransition
+                  >
+                    {t("login.form.forgotPassword")}
+                  </Link>
+                </div>
+                <Input
+                  id="password"
+                  name="password"
+                  required
+                  type="password"
+                  placeholder={t("login.form.passwordPlaceholder")}
+                />
 
-              {actionData &&
-              "fieldErrors" in actionData &&
-              actionData.fieldErrors.password ? (
-                <FormErrors errors={actionData.fieldErrors.password} />
+                {actionData &&
+                "fieldErrors" in actionData &&
+                actionData.fieldErrors.password ? (
+                  <FormErrors errors={actionData.fieldErrors.password} />
+                ) : null}
+              </div>
+              <Button
+                type="submit"
+                className="w-full"
+                name="intent"
+                value="login"
+              >
+                {t("login.form.submit")}
+              </Button>
+              {actionData && "error" in actionData ? (
+                actionData.error === "Email not confirmed" ? (
+                  <Alert variant="destructive" className="bg-destructive/10">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Email not confirmed</AlertTitle>
+                    <AlertDescription className="flex flex-col items-start gap-2">
+                      Before signing in, please verify your email.
+                      <Button
+                        variant="outline"
+                        className="text-foreground flex items-center justify-between gap-2"
+                        onClick={onResendClick}
+                      >
+                        Resend confirmation email
+                        {fetcher.state === "submitting" ? (
+                          <Loader2Icon
+                            data-testid="resend-confirmation-email-spinner"
+                            className="size-4 animate-spin"
+                          />
+                        ) : null}
+                      </Button>
+                    </AlertDescription>
+                  </Alert>
+                ) : (
+                  <FormErrors errors={[actionData.error]} />
+                )
               ) : null}
-            </div>
-            <Button
-              type="submit"
-              className="w-full"
-              name="intent"
-              value="login"
+            </Form>
+            <SignInButtons />
+          </CardContent>
+        </Card>
+        <div className="flex flex-col items-center justify-center text-sm">
+          <p className="text-muted-foreground text-sm">
+            {t("login.noAccount")}{" "}
+            <Link
+              to="/auth/join"
+              className="text-foreground hover:text-primary text-sm font-medium underline underline-offset-4"
+              viewTransition
             >
-              {t("login.form.submit")}
-            </Button>
-            {actionData && "error" in actionData ? (
-              actionData.error === "Email not confirmed" ? (
-                <Alert variant="destructive" className="bg-destructive/10">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>Email not confirmed</AlertTitle>
-                  <AlertDescription className="flex flex-col items-start gap-2">
-                    Before signing in, please verify your email.
-                    <Button
-                      variant="outline"
-                      className="text-foreground flex items-center justify-between gap-2"
-                      onClick={onResendClick}
-                    >
-                      Resend confirmation email
-                      {fetcher.state === "submitting" ? (
-                        <Loader2Icon
-                          data-testid="resend-confirmation-email-spinner"
-                          className="size-4 animate-spin"
-                        />
-                      ) : null}
-                    </Button>
-                  </AlertDescription>
-                </Alert>
-              ) : (
-                <FormErrors errors={[actionData.error]} />
-              )
-            ) : null}
-          </Form>
-          <SignInButtons />
-        </CardContent>
-      </Card>
-      <div className="flex flex-col items-center justify-center text-sm">
-        <p className="text-muted-foreground text-sm">
-          {t("login.noAccount")}{" "}
-          <Link
-            to="/auth/join"
-            className="text-foreground hover:text-primary text-sm font-medium underline underline-offset-4"
-            viewTransition
-          >
-            {t("login.signUp")}
-          </Link>
-        </p>
-      </div>
+              {t("login.signUp")}
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   );

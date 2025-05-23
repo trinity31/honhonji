@@ -176,7 +176,7 @@ export default function Join({ actionData }: Route.ComponentProps) {
   const { t } = useTranslation();
   // Reference to the form element for resetting after successful submission
   const formRef = useRef<HTMLFormElement>(null);
-  
+
   // Reset the form when registration is successful
   useEffect(() => {
     if (actionData && "success" in actionData && actionData.success) {
@@ -186,14 +186,14 @@ export default function Join({ actionData }: Route.ComponentProps) {
   }, [actionData]);
   return (
     <div className="flex flex-col items-center justify-center gap-8 py-8">
-      <Card className="w-full max-w-md bg-primary/10 dark:bg-[#0e0e1b]">
+      <Card className="bg-primary/10 w-full max-w-md dark:bg-[#0e0e1b]">
         <CardHeader className="flex flex-col items-center">
           <CardTitle className="text-2xl font-semibold" role="heading">
             {t("join.title")}
           </CardTitle>
-          <CardDescription className="text-base">
+          {/* <CardDescription className="text-base">
             {t("join.description")}
-          </CardDescription>
+          </CardDescription> */}
         </CardHeader>
         <CardContent className="grid gap-4">
           <Form
@@ -281,7 +281,10 @@ export default function Join({ actionData }: Route.ComponentProps) {
                 <FormErrors errors={actionData.fieldErrors.confirmPassword} />
               ) : null}
             </div>
-            <FormButton label={t("join.submit") || "Create account"} className="w-full" />
+            <FormButton
+              label={t("join.submit") || "Create account"}
+              className="w-full"
+            />
             {actionData && "error" in actionData && actionData.error ? (
               <FormErrors errors={[actionData.error]} />
             ) : null}
@@ -323,7 +326,10 @@ export default function Join({ actionData }: Route.ComponentProps) {
                 />
                 <AlertTitle>{t("join.success", "Account created!")}</AlertTitle>
                 <AlertDescription className="text-green-700 dark:text-green-600">
-                  {t("join.successDescription", "Before you can sign in, please verify your email. You can close this tab.")}
+                  {t(
+                    "join.successDescription",
+                    "Before you can sign in, please verify your email. You can close this tab.",
+                  )}
                 </AlertDescription>
               </Alert>
             ) : null}
@@ -333,14 +339,14 @@ export default function Join({ actionData }: Route.ComponentProps) {
       </Card>
       <div className="flex flex-col items-center justify-center text-sm">
         <p className="text-muted-foreground">
-          {t("join.loginLinkPrefix", "Already have an account?")}
+          {t("join.loginLinkPrefix", "Already have an account?")}{" "}
           <Link
             to="/login"
             viewTransition
             data-testid="form-signin-link"
-            className="text-muted-foreground hover:text-foreground text-underline underline transition-colors"
+            className="text-foreground hover:text-primary text-sm font-medium underline underline-offset-4"
           >
-            {t("join.loginLink", "Sign in")}
+            {t("join.loginLink")}
           </Link>
         </p>
       </div>
