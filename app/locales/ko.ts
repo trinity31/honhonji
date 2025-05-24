@@ -19,7 +19,8 @@ const ko: Translation = {
   home: {
     title: "혼혼지",
     midtitle: "혼밥, 혼산책 지도",
-    subtitle: "혼자 가기 좋은 맛집과 산책길을 한눈에 찾을 수 있어요.",
+    subtitle:
+      "나만의 맛집, 나만의 길! 혼자 가기 좋은 맛집과 산책길을 한눈에 찾을 수 있어요.",
   },
   navigation: {
     kr: "한국어",
