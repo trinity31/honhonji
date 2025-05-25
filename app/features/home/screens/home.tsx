@@ -28,7 +28,9 @@ import {
   Utensils,
   Zap,
 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useRouteLoaderData } from "react-router";
 import { Link } from "react-router";
 import { type Theme, useTheme } from "remix-themes";
 
@@ -43,6 +45,13 @@ import {
   TabsTrigger,
 } from "~/core/components/ui/tabs";
 import i18next from "~/core/lib/i18next.server";
+
+// 전역 카카오 타입 선언
+declare global {
+  interface Window {
+    kakao: any;
+  }
+}
 
 /**
  * Meta function for setting page metadata
@@ -113,6 +122,254 @@ export default function Home() {
   // Get the translation function for the current locale
   const { t } = useTranslation();
   const [theme, setTheme] = useTheme();
+  const mapRef = useRef<any>(null);
+  const [userLocation, setUserLocation] = useState({
+    lat: 37.5665,
+    lng: 126.978,
+  }); // 기본값은 서울시청
+  const rootData = useRouteLoaderData("root");
+  const kakaoAppKey = rootData?.env?.KAKAO_APP_KEY || "";
+
+  // 지도 마커 테스트용 샘플 식당 데이터 (3개)
+  const sampleRestaurants = [
+    {
+      name: "행복밥상",
+      lat: 37.475886,
+      lng: 127.043201,
+      description: "아침식사가 제공되는 가성비 좋고 푸짐한 식당",
+      image: "/images/res1.png",
+    },
+    {
+      name: "슬로우캘리 양재포이점",
+      lat: 37.47622,
+      lng: 127.043966,
+      description: "신선한 재료로 만든 건강한 한끼, 비건 메뉴 제공",
+      image: "/images/res2.jpeg",
+    },
+    {
+      name: "버거베어 프리다이너",
+      lat: 37.476268,
+      lng: 127.039455,
+      description:
+        "5성급 호텔 셰프님이 만드는 육즙 폭발 퀄리티&가성비 수제버거 맛집",
+      image: "/images/res3.jpeg",
+    },
+  ];
+
+  // 카카오 지도 초기화
+  useEffect(() => {
+    // 카카오 지도 API 스크립트 동적 로드
+    const script = document.createElement("script");
+
+    console.log("rootData", rootData);
+    console.log("kakaoAppKey", kakaoAppKey);
+    // root loader에서 전달받은 환경 변수 사용
+
+    if (!kakaoAppKey) {
+      console.error("KAKAO_APP_KEY 환경 변수가 설정되지 않았습니다.");
+    }
+    script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${kakaoAppKey}&autoload=false`;
+    script.async = true;
+
+    script.onload = () => {
+      // 카카오맵 로드
+      window.kakao.maps.load(() => {
+        // 지도 초기화 시간 지연 추가
+        setTimeout(() => {
+          initializeMap();
+          // 샘플 식당 마커 표시
+          sampleRestaurants.forEach((restaurant) => {
+            const marker = new window.kakao.maps.Marker({
+              map: mapRef.current,
+              position: new window.kakao.maps.LatLng(
+                restaurant.lat,
+                restaurant.lng,
+              ),
+              title: restaurant.name,
+            });
+            // 이름만 항상 보이는 InfoWindow
+            const nameWindow = new window.kakao.maps.InfoWindow({
+              content: `<div style='padding:4px 8px;font-size:13px;font-weight:bold;background:#fff;border-radius:4px;border:1px solid #eee;'>${restaurant.name}</div>`,
+              removable: false,
+            });
+            nameWindow.open(mapRef.current, marker);
+            // 마커 클릭 시 설명 포함 InfoWindow
+            const descWindow = new window.kakao.maps.InfoWindow({
+              content: `<div style='padding:8px 12px;min-width:140px;font-size:14px;line-height:1.4;'><b>${restaurant.name}</b><br>${restaurant.description}</div>`,
+            });
+            window.kakao.maps.event.addListener(marker, "click", function () {
+              nameWindow.close();
+              descWindow.open(mapRef.current, marker);
+            });
+            // 지도 클릭 시 description 창 닫고 이름만 다시 표시
+            window.kakao.maps.event.addListener(
+              mapRef.current,
+              "click",
+              function () {
+                descWindow.close();
+                nameWindow.open(mapRef.current, marker);
+              },
+            );
+          });
+          console.log("카카오맵 초기화 시도 및 샘플 마커 표시");
+        }, 500);
+      });
+    };
+
+    document.head.appendChild(script);
+
+    return () => {
+      // 컴포넌트 언마운트 시 처리
+      if (mapRef.current) {
+        mapRef.current = null;
+      }
+    };
+  }, []);
+
+  // 사용자 위치 가져오기
+  useEffect(() => {
+    // 위치 정보 가져오기 함수
+    const getUserLocation = () => {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const { latitude, longitude } = position.coords;
+            console.log("사용자 위치 가져옴:", latitude, longitude);
+            setUserLocation({ lat: latitude, lng: longitude });
+
+            // 지도가 이미 초기화된 경우 중심점 변경
+            if (mapRef.current) {
+              try {
+                const newCenter = new window.kakao.maps.LatLng(
+                  latitude,
+                  longitude,
+                );
+                mapRef.current.setCenter(newCenter);
+                console.log("지도 중심 이동 완료");
+
+                // 사용자 위치 마커 제거 요청으로 마커 업데이트 코드 제거
+                // 지도 중앙에만 사용자 위치 표시
+              } catch (e) {
+                console.error("지도 중심 이동 오류:", e);
+              }
+            } else {
+              console.log("아직 지도가 초기화되지 않음");
+            }
+          },
+          (error) => {
+            console.error("위치 정보를 가져오는데 실패했습니다:", error);
+          },
+          { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 },
+        );
+      } else {
+        console.error("이 브라우저에서는 위치 정보를 지원하지 않습니다.");
+      }
+    };
+
+    // 초기 위치 가져오기
+    getUserLocation();
+
+    // 지도가 초기화된 후 1초 후에 다시 위치 가져오기 시도
+    const mapCheckInterval = setInterval(() => {
+      if (mapRef.current) {
+        getUserLocation();
+        clearInterval(mapCheckInterval);
+      }
+    }, 1000);
+
+    // 컴포넌트 언마운트 시 인터벌 정리
+    return () => {
+      clearInterval(mapCheckInterval);
+    };
+  }, []);
+
+  // 지도 초기화 함수
+  const initializeMap = () => {
+    if (!window.kakao || !window.kakao.maps) {
+      console.error("카카오 지도 API가 로드되지 않았습니다.");
+      return;
+    }
+
+    const mapDiv = document.getElementById("map");
+    if (!mapDiv) {
+      console.error("map 요소를 찾을 수 없습니다:", mapDiv);
+      return;
+    }
+
+    console.log("map 요소 찾음:", mapDiv);
+
+    try {
+      const mapOptions = {
+        center: new window.kakao.maps.LatLng(
+          userLocation.lat,
+          userLocation.lng,
+        ),
+        level: 3, // 확대 레벨 (숫자가 작을수록 더 확대됨)
+      };
+
+      const kakaoMap = new window.kakao.maps.Map(mapDiv, mapOptions);
+      console.log("지도 생성 성공");
+      mapRef.current = kakaoMap;
+
+      // 지도 컨트롤 추가
+      const zoomControl = new window.kakao.maps.ZoomControl();
+      kakaoMap.addControl(zoomControl, window.kakao.maps.ControlPosition.RIGHT);
+
+      // 사용자 위치는 마커 없이 중앙에만 표시
+      // 마커 제거 요청으로 사용자 위치 마커 코드 제거
+      // 지도 중앙에 사용자 위치만 표시
+
+      // 예시 데이터 - 실제로는 API에서 가져온 데이터를 사용할 것입니다
+      const places = [
+        {
+          id: 1,
+          name: "가게 이름 1",
+          lat: userLocation.lat + 0.005,
+          lng: userLocation.lng - 0.005,
+          rating: 4.0,
+          reviews: 123,
+        },
+        {
+          id: 2,
+          name: "가게 이름 2",
+          lat: userLocation.lat - 0.003,
+          lng: userLocation.lng + 0.004,
+          rating: 3.0,
+          reviews: 45,
+        },
+      ];
+
+      // 가게 마커 추가
+      places.forEach((place) => {
+        const marker = new window.kakao.maps.Marker({
+          position: new window.kakao.maps.LatLng(place.lat, place.lng),
+          map: kakaoMap,
+        });
+
+        // 마커 클릭 시 정보창 표시
+        const infoContent = `
+          <div style="width: 200px; padding: 8px;">
+            <h3 style="font-weight: 600;">${place.name}</h3>
+            <p style="font-size: 12px; color: #666;">가게 설명이 들어갑니다.</p>
+            <div style="margin-top: 4px;">
+              ${"★".repeat(Math.floor(place.rating))}${"☆".repeat(5 - Math.floor(place.rating))}
+              <span style="margin-left: 4px; font-size: 12px;">${place.rating.toFixed(1)} (${place.reviews})</span>
+            </div>
+          </div>
+        `;
+
+        const infoWindow = new window.kakao.maps.InfoWindow({
+          content: infoContent,
+        });
+
+        window.kakao.maps.event.addListener(marker, "click", () => {
+          infoWindow.open(kakaoMap, marker);
+        });
+      });
+    } catch (error) {
+      console.error("카카오맵 초기화 중 오류 발생:", error);
+    }
+  };
 
   return (
     <div className="flex min-h-screen flex-col bg-white dark:bg-slate-950">
@@ -142,23 +399,26 @@ export default function Home() {
               </div>
             </div>
             <div className="mx-auto flex w-full items-center justify-center">
-              <Card className="w-full overflow-hidden border-none shadow-lg">
+              <Card className="w-full overflow-hidden border-none shadow-lg p-0">
                 <CardContent className="p-0">
                   <div className="relative aspect-video overflow-hidden rounded-lg">
                     <img
-                      src="/placeholder.svg?height=400&width=800&text=오늘의+추천+맛집"
-                      alt="혼밥 이미지"
-                      className="object-cover"
-                      width={800}
-                      height={400}
+                      src={sampleRestaurants[0].image}
+                      alt={sampleRestaurants[0].name}
+                      className="object-cover w-full h-full"
                     />
                     <div className="absolute inset-0 bg-black/30" />
+                    <div className="absolute top-4 left-4">
+                      <span className="bg-primary text-white text-xs font-semibold px-2.5 py-1 rounded-full">
+                        오늘의 추천식당
+                      </span>
+                    </div>
                     <div className="absolute right-4 bottom-4 left-4">
                       <p className="text-lg font-medium text-white">
-                        오늘의 추천 식당
+                        {sampleRestaurants[0].name}
                       </p>
                       <p className="text-sm text-white/80">
-                        혼자서도 편안하게 즐길 수 있는 맛집
+                        {sampleRestaurants[0].description}
                       </p>
                     </div>
                   </div>
@@ -264,11 +524,11 @@ export default function Home() {
                 {/* Map View */}
                 <div className="bg-muted relative aspect-[16/9] w-full md:aspect-[21/9] lg:aspect-[3/1]">
                   <div className="absolute inset-0">
-                    <img
-                      src="/placeholder.svg?height=800&width=1600&text=지도+영역"
-                      alt="지도"
-                      className="h-full w-full object-cover"
-                    />
+                    <div
+                      id="map"
+                      className="relative h-full w-full"
+                      style={{ minHeight: "400px" }}
+                    ></div>
                   </div>
 
                   {/* Map Markers Examples - 실제 구현 시 동적으로 생성 */}
@@ -319,22 +579,16 @@ export default function Home() {
                 <Card>
                   <CardContent className="p-4">
                     <img
-                      src="/placeholder.svg?height=200&width=400&text=식당+이미지+1"
-                      alt="식당 이미지 1"
-                      className="mb-3 h-40 w-full rounded-md object-cover"
+                      src={sampleRestaurants[0].image}
+                      alt={sampleRestaurants[0].name}
+                      className="mb-3 aspect-[4/3] w-full rounded-md object-cover"
                     />
-                    <h3 className="text-lg font-semibold">식당 이름 1</h3>
+                    <h3 className="text-lg font-semibold">
+                      {sampleRestaurants[0].name}
+                    </h3>
                     <p className="text-muted-foreground text-sm">
-                      서울시 강남구 | 한식
+                      {sampleRestaurants[0].description}
                     </p>
-                    <div className="mt-1 flex items-center">
-                      <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                      <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                      <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                      <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                      <Star className="text-muted-foreground fill-muted-foreground h-4 w-4" />
-                      <span className="ml-1 text-xs">4.0 (123)</span>
-                    </div>
                     <Button
                       size="sm"
                       className="bg-primary hover:bg-primary/90 mt-3 w-full"
@@ -343,26 +597,20 @@ export default function Home() {
                     </Button>
                   </CardContent>
                 </Card>
-                {/* Restaurant Card Example 2 */}
+                {/* Restaurant Card 2 */}
                 <Card>
                   <CardContent className="p-4">
                     <img
-                      src="/placeholder.svg?height=200&width=400&text=식당+이미지+2"
-                      alt="식당 이미지 2"
-                      className="mb-3 h-40 w-full rounded-md object-cover"
+                      src={sampleRestaurants[1].image}
+                      alt={sampleRestaurants[1].name}
+                      className="mb-3 aspect-[4/3] w-full rounded-md object-cover"
                     />
-                    <h3 className="text-lg font-semibold">식당 이름 2</h3>
+                    <h3 className="text-lg font-semibold">
+                      {sampleRestaurants[1].name}
+                    </h3>
                     <p className="text-muted-foreground text-sm">
-                      서울시 마포구 | 양식
+                      {sampleRestaurants[1].description}
                     </p>
-                    <div className="mt-1 flex items-center">
-                      <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                      <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                      <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                      <Star className="text-muted-foreground fill-muted-foreground h-4 w-4" />
-                      <Star className="text-muted-foreground fill-muted-foreground h-4 w-4" />
-                      <span className="ml-1 text-xs">3.2 (56)</span>
-                    </div>
                     <Button
                       size="sm"
                       className="bg-primary hover:bg-primary/90 mt-3 w-full"
@@ -371,7 +619,28 @@ export default function Home() {
                     </Button>
                   </CardContent>
                 </Card>
-                {/* Add more restaurant cards as needed */}
+                {/* Restaurant Card 3 */}
+                <Card>
+                  <CardContent className="p-4">
+                    <img
+                      src={sampleRestaurants[2].image}
+                      alt={sampleRestaurants[2].name}
+                      className="mb-3 aspect-[4/3] w-full rounded-md object-cover"
+                    />
+                    <h3 className="text-lg font-semibold">
+                      {sampleRestaurants[2].name}
+                    </h3>
+                    <p className="text-muted-foreground text-sm">
+                      {sampleRestaurants[2].description}
+                    </p>
+                    <Button
+                      size="sm"
+                      className="bg-primary hover:bg-primary/90 mt-3 w-full"
+                    >
+                      자세히 보기
+                    </Button>
+                  </CardContent>
+                </Card>
               </div>
             </TabsContent>
           </Tabs>

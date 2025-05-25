@@ -101,6 +101,9 @@ export async function loader({ request }: Route.LoaderArgs) {
   return {
     theme: getTheme(),
     locale,
+    env: {
+      KAKAO_APP_KEY: process.env.KAKAO_APP_KEY,
+    },
   };
 }
 
@@ -159,11 +162,7 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
     pathname.includes("/legal") || pathname.includes("/blog");
 
   return (
-    <html
-      lang="ko"
-      className={cn(theme ?? "", "h-full")}
-      dir={i18n.dir()}
-    >
+    <html lang="ko" className={cn(theme ?? "", "h-full")} dir={i18n.dir()}>
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
