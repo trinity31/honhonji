@@ -74,13 +74,13 @@ export default [
 
       // Map related routes
       ...prefix("/map", [
-        index("features/map/map-page.tsx"),
+        index("features/places/pages/map-page.tsx"),
         // Add more map related routes here
       ]),
-      
+
       // Places routes
       ...prefix("/places", [
-        route("/report", "features/places/report/report-page.tsx"),
+        route("/submission", "features/submissions/submittion-page.tsx"),
         // Add more places related routes here
       ]),
     ]),

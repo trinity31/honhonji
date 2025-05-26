@@ -32,7 +32,17 @@ layout("features/products/layouts/product-overview-layout.tsx", [
 
 children이 들어갈 부분은 Outlet 태그 사용.
 
-### Data Fetching
+## Database
+
+1. Use drizzle-orm and drizzle-kit managing database using typescript.
+2. drizzle.config.ts: Drizzle configuration.
+3. To create a new table, create "schema.ts" to define table using drizzle orm in each feature folder, and run db:generate to generate a migration file, then run "db:migrate", and then "db:typegen"
+
+## Authentication
+
+1. users table is for authentication which is already created by supabase, and "profiles" table is for user data. "profile_id" of the profiles table is the foreign key of users table's id.
+
+## Data Fetching
 
 1. By default, use loader function to fetch data. loader runs in backend, and run before UI is given to the user.
 

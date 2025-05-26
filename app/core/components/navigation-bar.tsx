@@ -17,8 +17,8 @@
  * - Unauthenticated state with sign in/sign up buttons
  */
 import { CogIcon, HomeIcon, LogOutIcon, MenuIcon } from "lucide-react";
-import { Link, NavLink, useLocation } from "react-router";
 import { useTranslation } from "react-i18next";
+import { Link, NavLink, useLocation } from "react-router";
 import { Theme, useTheme } from "remix-themes";
 
 // Import custom UI components
@@ -44,17 +44,17 @@ import {
 
 /**
  * UserMenu Component
- * 
+ *
  * Displays the authenticated user's profile menu with avatar and dropdown options.
  * This component is shown in the navigation bar when a user is logged in and provides
  * quick access to user-specific actions and information.
- * 
+ *
  * Features:
  * - Avatar display with image or fallback initials
  * - User name and email display
  * - Quick navigation to dashboard
  * - Logout functionality
- * 
+ *
  * @param name - The user's display name
  * @param email - The user's email address (optional)
  * @param avatarUrl - URL to the user's avatar image (optional)
@@ -78,7 +78,7 @@ function UserMenu({
           <AvatarFallback>{name.slice(0, 2)}</AvatarFallback>
         </Avatar>
       </DropdownMenuTrigger>
-      
+
       {/* Dropdown content with user info and actions */}
       <DropdownMenuContent className="w-56">
         {/* User information display */}
@@ -87,7 +87,7 @@ function UserMenu({
           <span className="truncate text-xs">{email}</span>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        
+
         {/* Dashboard link */}
         <DropdownMenuItem asChild>
           <SheetClose asChild>
@@ -97,7 +97,7 @@ function UserMenu({
             </Link>
           </SheetClose>
         </DropdownMenuItem>
-        
+
         {/* Logout link */}
         <DropdownMenuItem asChild>
           <SheetClose asChild>
@@ -114,22 +114,22 @@ function UserMenu({
 
 /**
  * AuthButtons Component
- * 
+ *
  * Displays authentication buttons (Sign in and Sign up) for unauthenticated users.
  * This component is shown in the navigation bar when no user is logged in and provides
  * quick access to authentication screens.
- * 
+ *
  * Features:
  * - Sign in button with ghost styling (less prominent)
  * - Sign up button with default styling (more prominent)
  * - View transitions for smooth navigation to auth screens
  * - Compatible with mobile navigation drawer (SheetClose integration)
- * 
+ *
  * @returns Fragment containing sign in and sign up buttons
  */
 function AuthButtons() {
   const { t } = useTranslation();
-  
+
   return (
     <>
       {/* Sign in button (less prominent) */}
@@ -140,7 +140,7 @@ function AuthButtons() {
           </Link>
         </SheetClose>
       </Button>
-      
+
       {/* Sign up button (more prominent) */}
       <Button variant="default" asChild>
         <SheetClose asChild>
@@ -155,15 +155,15 @@ function AuthButtons() {
 
 /**
  * Actions Component
- * 
+ *
  * Displays utility actions and settings in the navigation bar, including:
  * - Debug/settings dropdown menu with links to monitoring tools
  * - Theme switcher for toggling between light and dark mode
  * - Language switcher for changing the application language
- * 
+ *
  * This component is shown in the navigation bar for all users regardless of
  * authentication state and provides access to application-wide settings and tools.
- * 
+ *
  * @returns Fragment containing settings dropdown, theme switcher, and language switcher
  */
 function Actions() {
@@ -195,7 +195,7 @@ function Actions() {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      
+
       {/* Theme switcher component (light/dark mode) */}
       <ThemeSwitcher />
     </>
@@ -204,11 +204,11 @@ function Actions() {
 
 /**
  * NavigationBar Component
- * 
+ *
  * The main navigation header for the application that adapts to different screen sizes
  * and user authentication states. This component serves as the primary navigation
  * interface and combines several sub-components to create a complete navigation experience.
- * 
+ *
  * Features:
  * - Responsive design with desktop navigation and mobile drawer
  * - Application branding with localized title
@@ -217,7 +217,7 @@ function Actions() {
  * - User profile menu with avatar for authenticated users
  * - Sign in/sign up buttons for unauthenticated users
  * - Theme and language switching options
- * 
+ *
  * @param name - The authenticated user's name (if available)
  * @param email - The authenticated user's email (if available)
  * @param avatarUrl - The authenticated user's avatar URL (if available)
@@ -237,31 +237,31 @@ export function NavigationBar({
 }) {
   // Get translation function for internationalization
   const { t } = useTranslation();
-  
+
   return (
     <nav
       className={
-        "mx-auto flex h-16 w-full items-center justify-between border-b px-5 shadow-xs backdrop-blur-lg transition-opacity md:px-10 sticky top-0 z-50"
+        "sticky top-0 z-50 mx-auto flex h-16 w-full items-center justify-between border-b px-5 shadow-xs backdrop-blur-lg transition-opacity md:px-10"
       }
     >
       <div className="mx-auto flex h-full w-full max-w-screen-2xl items-center justify-between py-3">
         {/* Application logo/title with link to home */}
         <Link to="/" className="flex items-center gap-2">
           <div className="relative h-6 w-6">
-            <img 
-              src="/logo_light.png" 
-              alt="" 
-              className="h-full w-full dark:hidden" 
+            <img
+              src="/logo_light.png"
+              alt=""
+              className="h-full w-full dark:hidden"
             />
-            <img 
-              src="/logo_dark.png" 
-              alt="" 
-              className="hidden h-full w-full dark:block" 
+            <img
+              src="/logo_dark.png"
+              alt=""
+              className="hidden h-full w-full dark:block"
             />
           </div>
           <h1 className="text-lg font-extrabold">{t("home.title")}</h1>
         </Link>
-        
+
         {/* Desktop navigation menu (hidden on mobile) */}
         <div className="hidden h-full items-center gap-5 md:flex">
           {/* Main navigation links */}
@@ -269,7 +269,7 @@ export function NavigationBar({
             to="/"
             end
             className={({ isActive }: { isActive: boolean }) =>
-              `text-sm transition-colors ${isActive ? 'text-foreground font-medium' : 'text-muted-foreground hover:text-foreground'}`
+              `text-sm transition-colors ${isActive ? "text-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`
             }
           >
             홈
@@ -277,15 +277,15 @@ export function NavigationBar({
           <NavLink
             to="/map"
             className={({ isActive }: { isActive: boolean }) =>
-              `text-sm transition-colors ${isActive ? 'text-foreground font-medium' : 'text-muted-foreground hover:text-foreground'}`
+              `text-sm transition-colors ${isActive ? "text-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`
             }
           >
             지도
           </NavLink>
           <NavLink
-            to="/places/report"
+            to="/places/submission"
             className={({ isActive }: { isActive: boolean }) =>
-              `text-sm transition-colors ${isActive ? 'text-foreground font-medium' : 'text-muted-foreground hover:text-foreground'}`
+              `text-sm transition-colors ${isActive ? "text-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`
             }
           >
             장소 제보
@@ -295,7 +295,7 @@ export function NavigationBar({
             <NavLink
               to="/dashboard"
               className={({ isActive }: { isActive: boolean }) =>
-                `text-sm transition-colors ${isActive ? 'text-foreground font-medium' : 'text-muted-foreground hover:text-foreground'}`
+                `text-sm transition-colors ${isActive ? "text-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`
               }
             >
               내 활동
@@ -306,20 +306,20 @@ export function NavigationBar({
             <NavLink
               to="/admin"
               className={({ isActive }: { isActive: boolean }) =>
-                `text-sm transition-colors ${isActive ? 'text-foreground font-medium' : 'text-muted-foreground hover:text-foreground'}`
+                `text-sm transition-colors ${isActive ? "text-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`
               }
             >
               관리자
             </NavLink>
           )}
-          
+
           <Separator orientation="vertical" />
-          
+
           {/* Settings, theme switcher, and language switcher */}
           <Actions />
-          
+
           <Separator orientation="vertical" />
-          
+
           {/* Conditional rendering based on authentication state */}
           {loading ? (
             // Loading state with skeleton placeholder
@@ -338,7 +338,7 @@ export function NavigationBar({
             </>
           )}
         </div>
-        
+
         {/* Mobile menu trigger (hidden on desktop) */}
         <SheetTrigger className="size-6 md:hidden">
           <MenuIcon />

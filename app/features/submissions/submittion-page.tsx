@@ -1,6 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 
-import type { Route } from "./+types/report-page";
+import type { Route } from "./+types/submittion-page";
 
 import {
   Clock,
