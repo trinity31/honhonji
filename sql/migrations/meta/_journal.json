@@ -15,6 +15,48 @@
       "when": 1744715791562,
       "tag": "0001_great_junta",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1748323325914,
+      "tag": "0002_last_overlord",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1748325755728,
+      "tag": "0003_quiet_diamondback",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1748325924202,
+      "tag": "0004_wide_ares",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1748326278269,
+      "tag": "0005_certain_thunderbolts",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1748331124430,
+      "tag": "0008_grey_deathbird",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1748332604000,
+      "tag": "0009_sample_restaurants",
+      "breakpoints": true
     }
   ]
 }
