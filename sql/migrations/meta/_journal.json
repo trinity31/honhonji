@@ -15,27 +15,6 @@
       "when": 1744715791562,
       "tag": "0001_great_junta",
       "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1748225575505,
-      "tag": "0002_fresh_captain_flint",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1748226854232,
-      "tag": "0003_bizarre_corsair",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1748228163434,
-      "tag": "0004_exotic_kate_bishop",
-      "breakpoints": true
     }
   ]
 }
