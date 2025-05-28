@@ -118,6 +118,13 @@ export type Database = {
             referencedRelation: "tags"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "place_to_tags_tag_id_tags_id_fk"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "tags_list_view"
+            referencedColumns: ["id"]
+          },
         ]
       }
       places: {
@@ -301,7 +308,16 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      tags_list_view: {
+        Row: {
+          category: Database["public"]["Enums"]["tag_category"] | null
+          description: string | null
+          id: number | null
+          name: string | null
+          place_count: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       [_ in never]: never
