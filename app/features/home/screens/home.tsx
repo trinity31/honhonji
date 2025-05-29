@@ -1,16 +1,3 @@
-/**
- * Home Page Component
- *
- * This file implements the main landing page of the application with internationalization support.
- * It demonstrates the use of i18next for multi-language content, React Router's data API for
- * server-side rendering, and responsive design with Tailwind CSS.
- *
- * Key features:
- * - Server-side translation with i18next
- * - Client-side translation with useTranslation hook
- * - SEO-friendly metadata using React Router's meta export
- * - Responsive typography with Tailwind CSS
- */
 import type { Route } from "./+types/home";
 
 import {
@@ -31,8 +18,6 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useRouteLoaderData } from "react-router";
-import { Link } from "react-router";
-import { type Theme, useTheme } from "remix-themes";
 
 import { Badge } from "~/core/components/ui/badge";
 import { Button } from "~/core/components/ui/button";
@@ -45,6 +30,10 @@ import {
   TabsTrigger,
 } from "~/core/components/ui/tabs";
 import i18next from "~/core/lib/i18next.server";
+import { RestaurantCard } from "~/features/home/components/restaurant-card";
+
+import { createCustomOverlays } from "../components/custom-overlays";
+import { getRestaurants } from "../queries";
 
 // 전역 카카오 타입 선언
 declare global {
@@ -53,19 +42,6 @@ declare global {
   }
 }
 
-/**
- * Meta function for setting page metadata
- *
- * This function generates SEO-friendly metadata for the home page using data from the loader.
- * It sets:
- * - Page title from translated "home.title" key
- * - Meta description from translated "home.subtitle" key
- *
- * The metadata is language-specific based on the user's locale preference.
- *
- * @param data - Data returned from the loader function containing translated title and subtitle
- * @returns Array of metadata objects for the page
- */
 export const meta: Route.MetaFunction = ({ data }) => {
   return [
     { title: data?.title },
@@ -73,55 +49,19 @@ export const meta: Route.MetaFunction = ({ data }) => {
   ];
 };
 
-/**
- * Loader function for server-side data fetching
- *
- * This function is executed on the server before rendering the component.
- * It:
- * 1. Extracts the user's locale from the request (via cookies or Accept-Language header)
- * 2. Creates a translation function for that specific locale
- * 3. Returns translated strings for the page title and subtitle
- *
- * This approach ensures that even on first load, users see content in their preferred language,
- * which improves both user experience and SEO (search engines see localized content).
- *
- * @param request - The incoming HTTP request containing locale information
- * @returns Object with translated title and subtitle strings
- */
 export async function loader({ request }: Route.LoaderArgs) {
-  // Get a translation function for the user's locale from the request
   const t = await i18next.getFixedT(request);
+  const restaurants = await getRestaurants(request);
 
-  // Return translated strings for use in both the component and meta function
   return {
     title: t("home.title"),
     subtitle: t("home.subtitle"),
+    restaurants,
   };
 }
 
-/**
- * Home page component
- *
- * This is the main landing page component of the application. It displays a simple,
- * centered layout with a headline and subtitle, both internationalized using i18next.
- *
- * Features:
- * - Uses the useTranslation hook for client-side translation
- * - Implements responsive design with Tailwind CSS
- * - Maintains consistent translations between server and client
- *
- * The component is intentionally simple to serve as a starting point for customization.
- * It demonstrates the core patterns used throughout the application:
- * - Internationalization
- * - Responsive design
- * - Clean, semantic HTML structure
- *
- * @returns JSX element representing the home page
- */
-export default function Home() {
-  // Get the translation function for the current locale
+export default function Home({ loaderData }: Route.ComponentProps) {
   const { t } = useTranslation();
-  const [theme, setTheme] = useTheme();
   const mapRef = useRef<any>(null);
   const [userLocation, setUserLocation] = useState({
     lat: 37.5665,
@@ -130,38 +70,8 @@ export default function Home() {
   const rootData = useRouteLoaderData("root");
   const kakaoAppKey = rootData?.env?.KAKAO_APP_KEY || "";
 
-  // 지도 마커 테스트용 샘플 식당 데이터 (3개)
-  const sampleRestaurants = [
-    {
-      name: "행복밥상",
-      lat: 37.475886,
-      lng: 127.043201,
-      description: "아침식사가 제공되는 가성비 좋고 푸짐한 식당",
-      image: "/images/res1.png",
-    },
-    {
-      name: "슬로우캘리 양재포이점",
-      lat: 37.47622,
-      lng: 127.043966,
-      description: "신선한 재료로 만든 건강한 한끼, 비건 메뉴 제공",
-      image: "/images/res2.jpeg",
-    },
-    {
-      name: "버거베어 프리다이너",
-      lat: 37.476268,
-      lng: 127.039455,
-      description:
-        "5성급 호텔 셰프님이 만드는 육즙 폭발 퀄리티&가성비 수제버거 맛집",
-      image: "/images/res3.jpeg",
-    },
-  ];
-
-  // 카카오 지도 초기화
   useEffect(() => {
-    // 카카오 지도 API 스크립트 동적 로드
     const script = document.createElement("script");
-
-    console.log("rootData", rootData);
     console.log("kakaoAppKey", kakaoAppKey);
     // root loader에서 전달받은 환경 변수 사용
 
@@ -178,7 +88,7 @@ export default function Home() {
         setTimeout(() => {
           initializeMap();
           // 샘플 식당 마커 표시
-          sampleRestaurants.forEach((restaurant) => {
+          loaderData.restaurants.forEach((restaurant) => {
             const marker = new window.kakao.maps.Marker({
               map: mapRef.current,
               position: new window.kakao.maps.LatLng(
@@ -187,27 +97,28 @@ export default function Home() {
               ),
               title: restaurant.name,
             });
+            // 커스텀 오버레이 생성
+            const { nameWindow, descWindow } = createCustomOverlays(
+              marker,
+              restaurant,
+            );
+
             // 이름만 항상 보이는 InfoWindow
-            const nameWindow = new window.kakao.maps.InfoWindow({
-              content: `<div style='padding:4px 8px;font-size:13px;font-weight:bold;background:#fff;border-radius:4px;border:1px solid #eee;'>${restaurant.name}</div>`,
-              removable: false,
-            });
-            nameWindow.open(mapRef.current, marker);
+            nameWindow.setMap(mapRef.current);
+
             // 마커 클릭 시 설명 포함 InfoWindow
-            const descWindow = new window.kakao.maps.InfoWindow({
-              content: `<div style='padding:8px 12px;min-width:140px;font-size:14px;line-height:1.4;'><b>${restaurant.name}</b><br>${restaurant.description}</div>`,
-            });
             window.kakao.maps.event.addListener(marker, "click", function () {
-              nameWindow.close();
-              descWindow.open(mapRef.current, marker);
+              nameWindow.setMap(null);
+              descWindow.setMap(mapRef.current);
             });
+
             // 지도 클릭 시 description 창 닫고 이름만 다시 표시
             window.kakao.maps.event.addListener(
               mapRef.current,
               "click",
               function () {
-                descWindow.close();
-                nameWindow.open(mapRef.current, marker);
+                descWindow.setMap(null);
+                nameWindow.setMap(mapRef.current);
               },
             );
           });
@@ -296,8 +207,6 @@ export default function Home() {
       return;
     }
 
-    console.log("map 요소 찾음:", mapDiv);
-
     try {
       const mapOptions = {
         center: new window.kakao.maps.LatLng(
@@ -314,58 +223,6 @@ export default function Home() {
       // 지도 컨트롤 추가
       const zoomControl = new window.kakao.maps.ZoomControl();
       kakaoMap.addControl(zoomControl, window.kakao.maps.ControlPosition.RIGHT);
-
-      // 사용자 위치는 마커 없이 중앙에만 표시
-      // 마커 제거 요청으로 사용자 위치 마커 코드 제거
-      // 지도 중앙에 사용자 위치만 표시
-
-      // 예시 데이터 - 실제로는 API에서 가져온 데이터를 사용할 것입니다
-      const places = [
-        {
-          id: 1,
-          name: "가게 이름 1",
-          lat: userLocation.lat + 0.005,
-          lng: userLocation.lng - 0.005,
-          rating: 4.0,
-          reviews: 123,
-        },
-        {
-          id: 2,
-          name: "가게 이름 2",
-          lat: userLocation.lat - 0.003,
-          lng: userLocation.lng + 0.004,
-          rating: 3.0,
-          reviews: 45,
-        },
-      ];
-
-      // 가게 마커 추가
-      places.forEach((place) => {
-        const marker = new window.kakao.maps.Marker({
-          position: new window.kakao.maps.LatLng(place.lat, place.lng),
-          map: kakaoMap,
-        });
-
-        // 마커 클릭 시 정보창 표시
-        const infoContent = `
-          <div style="width: 200px; padding: 8px;">
-            <h3 style="font-weight: 600;">${place.name}</h3>
-            <p style="font-size: 12px; color: #666;">가게 설명이 들어갑니다.</p>
-            <div style="margin-top: 4px;">
-              ${"★".repeat(Math.floor(place.rating))}${"☆".repeat(5 - Math.floor(place.rating))}
-              <span style="margin-left: 4px; font-size: 12px;">${place.rating.toFixed(1)} (${place.reviews})</span>
-            </div>
-          </div>
-        `;
-
-        const infoWindow = new window.kakao.maps.InfoWindow({
-          content: infoContent,
-        });
-
-        window.kakao.maps.event.addListener(marker, "click", () => {
-          infoWindow.open(kakaoMap, marker);
-        });
-      });
     } catch (error) {
       console.error("카카오맵 초기화 중 오류 발생:", error);
     }
@@ -399,26 +256,34 @@ export default function Home() {
               </div>
             </div>
             <div className="mx-auto flex w-full items-center justify-center">
-              <Card className="w-full overflow-hidden border-none shadow-lg p-0">
+              <Card className="w-full overflow-hidden border-none p-0 shadow-lg">
                 <CardContent className="p-0">
                   <div className="relative aspect-video overflow-hidden rounded-lg">
                     <img
-                      src={sampleRestaurants[0].image}
-                      alt={sampleRestaurants[0].name}
-                      className="object-cover w-full h-full"
+                      src={
+                        loaderData.restaurants[0].image_url ||
+                        "/images/default-restaurant.png"
+                      }
+                      alt={loaderData.restaurants[0].name}
+                      className="h-full w-full object-cover"
+                      onError={(e) => {
+                        // 이미지 로드 실패 시 기본 이미지로 대체
+                        const target = e.target as HTMLImageElement;
+                        target.src = "/images/default-restaurant.png";
+                      }}
                     />
                     <div className="absolute inset-0 bg-black/30" />
                     <div className="absolute top-4 left-4">
-                      <span className="bg-primary text-white text-xs font-semibold px-2.5 py-1 rounded-full">
+                      <span className="bg-primary rounded-full px-2.5 py-1 text-xs font-semibold text-white">
                         오늘의 추천식당
                       </span>
                     </div>
                     <div className="absolute right-4 bottom-4 left-4">
                       <p className="text-lg font-medium text-white">
-                        {sampleRestaurants[0].name}
+                        {loaderData.restaurants[0].name}
                       </p>
                       <p className="text-sm text-white/80">
-                        {sampleRestaurants[0].description}
+                        {loaderData.restaurants[0].description}
                       </p>
                     </div>
                   </div>
@@ -576,71 +441,13 @@ export default function Home() {
             <TabsContent value="list" className="mt-0">
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {/* Restaurant Card Example 1 */}
-                <Card>
-                  <CardContent className="p-4">
-                    <img
-                      src={sampleRestaurants[0].image}
-                      alt={sampleRestaurants[0].name}
-                      className="mb-3 aspect-[4/3] w-full rounded-md object-cover"
-                    />
-                    <h3 className="text-lg font-semibold">
-                      {sampleRestaurants[0].name}
-                    </h3>
-                    <p className="text-muted-foreground text-sm">
-                      {sampleRestaurants[0].description}
-                    </p>
-                    <Button
-                      size="sm"
-                      className="bg-primary hover:bg-primary/90 mt-3 w-full"
-                    >
-                      자세히 보기
-                    </Button>
-                  </CardContent>
-                </Card>
-                {/* Restaurant Card 2 */}
-                <Card>
-                  <CardContent className="p-4">
-                    <img
-                      src={sampleRestaurants[1].image}
-                      alt={sampleRestaurants[1].name}
-                      className="mb-3 aspect-[4/3] w-full rounded-md object-cover"
-                    />
-                    <h3 className="text-lg font-semibold">
-                      {sampleRestaurants[1].name}
-                    </h3>
-                    <p className="text-muted-foreground text-sm">
-                      {sampleRestaurants[1].description}
-                    </p>
-                    <Button
-                      size="sm"
-                      className="bg-primary hover:bg-primary/90 mt-3 w-full"
-                    >
-                      자세히 보기
-                    </Button>
-                  </CardContent>
-                </Card>
-                {/* Restaurant Card 3 */}
-                <Card>
-                  <CardContent className="p-4">
-                    <img
-                      src={sampleRestaurants[2].image}
-                      alt={sampleRestaurants[2].name}
-                      className="mb-3 aspect-[4/3] w-full rounded-md object-cover"
-                    />
-                    <h3 className="text-lg font-semibold">
-                      {sampleRestaurants[2].name}
-                    </h3>
-                    <p className="text-muted-foreground text-sm">
-                      {sampleRestaurants[2].description}
-                    </p>
-                    <Button
-                      size="sm"
-                      className="bg-primary hover:bg-primary/90 mt-3 w-full"
-                    >
-                      자세히 보기
-                    </Button>
-                  </CardContent>
-                </Card>
+                {loaderData.restaurants.map((restaurant) => (
+                  <RestaurantCard
+                    key={restaurant.id}
+                    restaurant={restaurant}
+                    onViewDetails={() => console.log("View details")}
+                  />
+                ))}
               </div>
             </TabsContent>
           </Tabs>
