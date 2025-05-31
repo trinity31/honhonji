@@ -31,9 +31,10 @@ import {
 } from "~/core/components/ui/tabs";
 import i18next from "~/core/lib/i18next.server";
 import { RestaurantCard } from "~/features/home/components/restaurant-card";
+import { colorSets } from "~/features/places/constants";
 
 import { createCustomOverlays } from "../components/custom-overlays";
-import { getRestaurants } from "../queries";
+import { getAllTags, getRestaurants } from "../queries";
 
 // 전역 카카오 타입 선언
 declare global {
@@ -52,11 +53,13 @@ export const meta: Route.MetaFunction = ({ data }) => {
 export async function loader({ request }: Route.LoaderArgs) {
   const t = await i18next.getFixedT(request);
   const restaurants = await getRestaurants(request);
+  const tags = await getAllTags(request);
 
   return {
     title: t("home.title"),
     subtitle: t("home.subtitle"),
     restaurants,
+    tags,
   };
 }
 
@@ -69,7 +72,99 @@ export default function Home({ loaderData }: Route.ComponentProps) {
   }); // 기본값은 서울시청
   const rootData = useRouteLoaderData("root");
   const kakaoAppKey = rootData?.env?.KAKAO_APP_KEY || "";
+  
+  // 선택된 태그 상태 관리
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  
+  // 필터링된 식당 목록
+  const filteredRestaurants = selectedTags.length > 0
+    ? loaderData.restaurants.filter(restaurant => 
+        restaurant.tags?.some(tag => 
+          selectedTags.includes(tag.name)
+        )
+      )
+    : loaderData.restaurants;
+    
+  // 태그 클릭 핸들러 - 선택/해제 토글
+  const handleTagClick = (tagName: string) => {
+    setSelectedTags(prev => 
+      prev.includes(tagName)
+        ? prev.filter(tag => tag !== tagName) // 이미 선택된 태그라면 해제
+        : [...prev, tagName] // 선택되지 않은 태그라면 추가
+    );
+  };
 
+  // 마커와 오버레이 참조 저장
+  const markersRef = useRef<any[]>([]);
+  const nameWindowsRef = useRef<any[]>([]);
+  const descWindowsRef = useRef<any[]>([]);
+  
+  // 지도에 표시된 마커 업데이트 함수
+  const updateMapMarkers = () => {
+    if (!mapRef.current) return;
+    
+    // 기존 마커와 오버레이 제거
+    markersRef.current.forEach(marker => marker.setMap(null));
+    nameWindowsRef.current.forEach(overlay => overlay.setMap(null));
+    descWindowsRef.current.forEach(overlay => overlay.setMap(null));
+    
+    // 배열 초기화
+    markersRef.current = [];
+    nameWindowsRef.current = [];
+    descWindowsRef.current = [];
+    
+    // 필터링된 식당만 표시
+    filteredRestaurants.forEach((restaurant) => {
+      if (!restaurant.lat || !restaurant.lng) return;
+      
+      const marker = new window.kakao.maps.Marker({
+        map: mapRef.current,
+        position: new window.kakao.maps.LatLng(
+          restaurant.lat,
+          restaurant.lng,
+        ),
+        title: restaurant.name,
+      });
+      
+      // 커스텀 오버레이 생성
+      const { nameWindow, descWindow } = createCustomOverlays(
+        marker,
+        restaurant,
+      );
+
+      // 이름만 항상 보이는 InfoWindow
+      nameWindow.setMap(mapRef.current);
+
+      // 마커 클릭 시 설명 포함 InfoWindow
+      window.kakao.maps.event.addListener(marker, "click", function () {
+        nameWindow.setMap(null);
+        descWindow.setMap(mapRef.current);
+      });
+
+      // 지도 클릭 시 description 창 닫고 이름만 다시 표시
+      window.kakao.maps.event.addListener(
+        mapRef.current,
+        "click",
+        function () {
+          descWindow.setMap(null);
+          nameWindow.setMap(mapRef.current);
+        },
+      );
+      
+      // 참조 배열에 추가
+      markersRef.current.push(marker);
+      nameWindowsRef.current.push(nameWindow);
+      descWindowsRef.current.push(descWindow);
+    });
+  };
+  
+  // 선택된 태그가 변경될 때 마커 업데이트
+  useEffect(() => {
+    if (mapRef.current) {
+      updateMapMarkers();
+    }
+  }, [selectedTags]);
+  
   useEffect(() => {
     const script = document.createElement("script");
     console.log("kakaoAppKey", kakaoAppKey);
@@ -87,42 +182,9 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         // 지도 초기화 시간 지연 추가
         setTimeout(() => {
           initializeMap();
-          // 샘플 식당 마커 표시
-          loaderData.restaurants.forEach((restaurant) => {
-            const marker = new window.kakao.maps.Marker({
-              map: mapRef.current,
-              position: new window.kakao.maps.LatLng(
-                restaurant.lat,
-                restaurant.lng,
-              ),
-              title: restaurant.name,
-            });
-            // 커스텀 오버레이 생성
-            const { nameWindow, descWindow } = createCustomOverlays(
-              marker,
-              restaurant,
-            );
-
-            // 이름만 항상 보이는 InfoWindow
-            nameWindow.setMap(mapRef.current);
-
-            // 마커 클릭 시 설명 포함 InfoWindow
-            window.kakao.maps.event.addListener(marker, "click", function () {
-              nameWindow.setMap(null);
-              descWindow.setMap(mapRef.current);
-            });
-
-            // 지도 클릭 시 description 창 닫고 이름만 다시 표시
-            window.kakao.maps.event.addListener(
-              mapRef.current,
-              "click",
-              function () {
-                descWindow.setMap(null);
-                nameWindow.setMap(mapRef.current);
-              },
-            );
-          });
-          console.log("카카오맵 초기화 시도 및 샘플 마커 표시");
+          // 필터링된 식당 마커 표시
+          updateMapMarkers();
+          console.log("카카오맵 초기화 시도 및 필터링된 마커 표시");
         }, 500);
       });
     };
@@ -297,48 +359,28 @@ export default function Home({ loaderData }: Route.ComponentProps) {
       {/* Category Pills */}
       <div className="w-full px-4 py-3 md:px-6">
         <div className="flex flex-wrap gap-2">
-          <Badge
-            variant="outline"
-            className="rounded-full border-orange-200 bg-orange-100 px-3 py-1 text-orange-600 hover:bg-orange-200"
-          >
-            가성비
-          </Badge>
-          <Badge
-            variant="outline"
-            className="rounded-full border-purple-200 bg-purple-100 px-3 py-1 text-purple-600 hover:bg-purple-200"
-          >
-            1인석 있음
-          </Badge>
-          <Badge
-            variant="outline"
-            className="rounded-full border-green-200 bg-green-100 px-3 py-1 text-green-600 hover:bg-green-200"
-          >
-            <Zap className="mr-1 h-3 w-3" /> 콘센트
-          </Badge>
-          <Badge
-            variant="outline"
-            className="rounded-full border-yellow-200 bg-yellow-100 px-3 py-1 text-yellow-600 hover:bg-yellow-200"
-          >
-            <Sun className="mr-1 h-3 w-3" /> 아침식사
-          </Badge>
-          <Badge
-            variant="outline"
-            className="rounded-full border-indigo-200 bg-indigo-100 px-3 py-1 text-indigo-600 hover:bg-indigo-200"
-          >
-            <Moon className="mr-1 h-3 w-3" /> 심야영업
-          </Badge>
-          <Badge
-            variant="outline"
-            className="rounded-full border-pink-200 bg-pink-100 px-3 py-1 text-pink-600 hover:bg-pink-200"
-          >
-            <Salad className="mr-1 h-3 w-3" /> 다이어트
-          </Badge>
-          <Badge
-            variant="outline"
-            className="rounded-full border-teal-200 bg-teal-100 px-3 py-1 text-teal-600 hover:bg-teal-200"
-          >
-            <Leaf className="mr-1 h-3 w-3" /> 비건
-          </Badge>
+          {loaderData.tags.map((tag, index) => {
+            // 태그 인덱스에 따라 색상 세트를 순환하며 적용
+            const colorIndex = index % colorSets.length;
+            const style = colorSets[colorIndex];
+            
+            // 태그가 선택되었는지 확인
+            const isSelected = selectedTags.includes(tag.name);
+            
+            return (
+              <Badge
+                key={tag.id}
+                variant="outline"
+                className={`rounded-full ${style.border} ${style.bg} px-3 py-1 ${style.text} ${style.hover} cursor-pointer transition-all
+                  ${isSelected ? 'ring-2 ring-offset-1 ring-primary font-semibold' : 'opacity-80'}
+                `}
+                onClick={() => handleTagClick(tag.name)}
+              >
+                {tag.name}
+                {isSelected && <span className="ml-1">✓</span>}
+              </Badge>
+            );
+          })}
         </div>
       </div>
 
@@ -439,16 +481,36 @@ export default function Home({ loaderData }: Route.ComponentProps) {
               </div>
             </TabsContent>
             <TabsContent value="list" className="mt-0">
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {/* Restaurant Card Example 1 */}
-                {loaderData.restaurants.map((restaurant) => (
-                  <RestaurantCard
-                    key={restaurant.id}
-                    restaurant={restaurant}
-                    onViewDetails={() => console.log("View details")}
-                  />
-                ))}
-              </div>
+              {selectedTags.length > 0 && (
+                <div className="mb-4 px-1">
+                  <p className="text-sm text-muted-foreground">
+                    <span className="font-medium text-primary">{filteredRestaurants.length}</span>개의 
+                    식당이 선택된 태그 
+                    <span className="font-medium text-primary">
+                      {selectedTags.map((tag, i) => 
+                        i === selectedTags.length - 1 ? `'${tag}'` : `'${tag}', `
+                      )}
+                    </span>에 
+                    해당합니다.
+                  </p>
+                </div>
+              )}
+              
+              {filteredRestaurants.length === 0 ? (
+                <div className="flex h-40 w-full items-center justify-center rounded-md border border-dashed">
+                  <p className="text-muted-foreground">선택한 태그에 해당하는 식당이 없습니다.</p>
+                </div>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {filteredRestaurants.map((restaurant) => (
+                    <RestaurantCard
+                      key={restaurant.id}
+                      restaurant={restaurant}
+                      onViewDetails={() => console.log("View details")}
+                    />
+                  ))}
+                </div>
+              )}
             </TabsContent>
           </Tabs>
         </div>
