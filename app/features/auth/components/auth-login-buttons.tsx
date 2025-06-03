@@ -13,6 +13,19 @@
  * This modular approach allows for easy addition or removal of authentication methods
  * without modifying the main authentication screens.
  */
+/**
+ * Generic authentication button component
+ *
+ * This component renders a consistent button for any authentication provider.
+ * It includes the provider's logo and a standardized "Continue with [Provider]" text.
+ * The button uses the outline variant for a clean look and links to the appropriate
+ * authentication flow.
+ *
+ * @param logo - React node representing the provider's logo
+ * @param label - Provider name (e.g., "Google", "Apple")
+ * @param href - URL path to the authentication flow for this provider
+ */
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
 import { Button } from "~/core/components/ui/button";
@@ -20,20 +33,6 @@ import { Button } from "~/core/components/ui/button";
 import { AppleLogo } from "./logos/apple";
 import { GoogleLogo } from "./logos/google";
 import { KakaoLogo } from "./logos/kakao";
-
-/**
- * Generic authentication button component
- * 
- * This component renders a consistent button for any authentication provider.
- * It includes the provider's logo and a standardized "Continue with [Provider]" text.
- * The button uses the outline variant for a clean look and links to the appropriate
- * authentication flow.
- * 
- * @param logo - React node representing the provider's logo
- * @param label - Provider name (e.g., "Google", "Apple")
- * @param href - URL path to the authentication flow for this provider
- */
-import { useTranslation } from "react-i18next";
 
 function AuthLoginButton({
   logo,
@@ -48,7 +47,7 @@ function AuthLoginButton({
   return (
     <Button
       variant="outline"
-      className="inline-flex items-center justify-center gap-2 hover:bg-primary/30 hover:border-primary/40 dark:hover:bg-primary/20 dark:hover:text-white transition-colors"
+      className="hover:bg-primary/30 hover:border-primary/40 dark:hover:bg-primary/20 inline-flex items-center justify-center gap-2 transition-colors dark:hover:text-white"
       asChild
     >
       <Link to={href}>
@@ -61,7 +60,7 @@ function AuthLoginButton({
 
 /**
  * Visual divider with "OR" text
- * 
+ *
  * This component creates a horizontal divider with the text "OR" centered between
  * two lines. It's used to visually separate different authentication method groups
  * (e.g., social logins from passwordless options).
@@ -76,16 +75,15 @@ function Divider() {
   );
 }
 
-
 /**
  * Social login authentication options
- * 
+ *
  * This component renders buttons for social authentication providers:
  * - Google
  * - GitHub
  * - Apple
  * - Kakao
- * 
+ *
  * Each button uses the provider's official logo and links to the appropriate
  * OAuth flow. The styling is consistent while respecting each provider's
  * brand guidelines for their logo presentation.
@@ -93,7 +91,7 @@ function Divider() {
 function SocialLoginButtons() {
   return (
     <>
-      <AuthLoginButton
+      {/* <AuthLoginButton
         logo={<GoogleLogo className="size-4" />}
         label="Google"
         href="/auth/social/start/google"
@@ -102,7 +100,7 @@ function SocialLoginButtons() {
         logo={<AppleLogo className="size-4 scale-150 dark:text-white" />}
         label="Apple"
         href="/auth/social/start/apple"
-      />
+      /> */}
       <AuthLoginButton
         logo={<KakaoLogo className="size-4 scale-125 dark:text-yellow-300" />}
         label="Kakao"
@@ -114,28 +112,26 @@ function SocialLoginButtons() {
 
 /**
  * Complete set of sign-in authentication options
- * 
+ *
  * This exported component provides all authentication options for the sign-in flow,
  * including both social logins and passwordless options, with a divider between them.
- * 
+ *
  * Usage:
  * ```tsx
  * <SignInButtons />
  * ```
  */
 export function SignInButtons() {
-  return (
-    <SocialLoginButtons />
-  );
+  return <SocialLoginButtons />;
 }
 
 /**
  * Authentication options for the sign-up flow
- * 
+ *
  * This exported component provides authentication options specifically for the sign-up flow.
  * It only includes social login options, as the passwordless options are typically
  * more relevant for returning users rather than new registrations.
- * 
+ *
  * Usage:
  * ```tsx
  * <SignUpButtons />

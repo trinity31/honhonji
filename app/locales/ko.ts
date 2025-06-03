@@ -52,8 +52,7 @@ const ko: Translation = {
     termsOfService: "이용약관",
     and: " 및 ",
     privacyPolicy: "개인정보 처리방침",
-    successDescription:
-      "로그인 전에 이메일을 인증해 주세요. 이 탭을 닫으셔도 됩니다.",
+    successDescription: "로그인을 해 주세요. 이 탭은 닫으셔도 됩니다.",
     loginLinkPrefix: "이미 계정이 있으신가요?",
   },
 };
