@@ -110,6 +110,7 @@ export default [
       ...prefix("/dashboard", [
         index("features/users/screens/dashboard.tsx"),
         route("/payments", "features/payments/screens/payments.tsx"),
+        route("/set-admin-role", "features/users/screens/set-admin-role.tsx"),
       ]),
       route("/account/edit", "features/users/screens/account.tsx"),
     ]),

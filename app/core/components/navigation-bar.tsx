@@ -64,10 +64,12 @@ function UserMenu({
   name,
   email,
   avatarUrl,
+  role,
 }: {
   name: string;
   email?: string;
   avatarUrl?: string | null;
+  role?: string;
 }) {
   return (
     <DropdownMenu>
@@ -88,15 +90,17 @@ function UserMenu({
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
 
-        {/* Dashboard link */}
-        {/* <DropdownMenuItem asChild>
-          <SheetClose asChild>
-            <Link to="/dashboard" viewTransition>
-              <HomeIcon className="size-4" />
-              대시보드
-            </Link>
-          </SheetClose>
-        </DropdownMenuItem> */}
+        {/* Dashboard link - admin 사용자만 표시 */}
+        {role === 'admin' && (
+          <DropdownMenuItem asChild>
+            <SheetClose asChild>
+              <Link to="/dashboard" viewTransition>
+                <HomeIcon className="size-4" />
+                대시보드
+              </Link>
+            </SheetClose>
+          </DropdownMenuItem>
+        )}
 
         {/* Logout link */}
         <DropdownMenuItem asChild>
@@ -157,27 +161,25 @@ function AuthButtons() {
  * Actions Component
  *
  * Displays utility actions and settings in the navigation bar, including:
- * - Debug/settings dropdown menu with links to monitoring tools
  * - Theme switcher for toggling between light and dark mode
  * - Language switcher for changing the application language
  *
  * This component is shown in the navigation bar for all users regardless of
  * authentication state and provides access to application-wide settings and tools.
  *
- * @returns Fragment containing settings dropdown, theme switcher, and language switcher
+ * @returns Fragment containing theme switcher and language switcher
  */
 function Actions() {
   return (
     <>
-      {/* Settings/debug dropdown menu */}
-      <DropdownMenu>
+      {/* Settings/debug dropdown menu with Sentry and Google Tag - 전체 주석 처리됨 */}
+      {/* <DropdownMenu>
         <DropdownMenuTrigger asChild className="cursor-pointer">
           <Button variant="ghost" size="icon">
             <CogIcon className="size-4" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          {/* Sentry monitoring link */}
           <DropdownMenuItem asChild>
             <SheetClose asChild>
               <Link to="/debug/sentry" viewTransition>
@@ -185,7 +187,6 @@ function Actions() {
               </Link>
             </SheetClose>
           </DropdownMenuItem>
-          {/* Google Analytics link */}
           <DropdownMenuItem asChild>
             <SheetClose asChild>
               <Link to="/debug/analytics" viewTransition>
@@ -194,7 +195,7 @@ function Actions() {
             </SheetClose>
           </DropdownMenuItem>
         </DropdownMenuContent>
-      </DropdownMenu>
+      </DropdownMenu> */}
 
       {/* Theme switcher component (light/dark mode) */}
       <ThemeSwitcher />
@@ -229,11 +230,13 @@ export function NavigationBar({
   email,
   avatarUrl,
   loading,
+  role,
 }: {
   name?: string;
   email?: string;
   avatarUrl?: string | null;
   loading: boolean;
+  role?: string;
 }) {
   // Get translation function for internationalization
   const { t } = useTranslation();
@@ -330,7 +333,7 @@ export function NavigationBar({
             <>
               {name ? (
                 // Authenticated state with user menu
-                <UserMenu name={name} email={email} avatarUrl={avatarUrl} />
+                <UserMenu name={name} email={email} avatarUrl={avatarUrl} role={role} />
               ) : (
                 // Unauthenticated state with auth buttons
                 <AuthButtons />
@@ -352,7 +355,7 @@ export function NavigationBar({
               <Link to="/map">지도</Link>
             </SheetClose>
             <SheetClose asChild>
-              <Link to="/places/report">장소 제보</Link>
+              <Link to="/places/submission">장소 제보</Link>
             </SheetClose>
             {name && (
               <SheetClose asChild>

@@ -9,7 +9,13 @@ export async function loader({ request }: Route.LoaderArgs) {
   const {
     data: { user },
   } = await client.auth.getUser();
-  if (user) {
+  
+  // 현재 URL 가져오기
+  const url = new URL(request.url);
+  const path = url.pathname;
+  
+  // /map과 /places/submission 경로는 리다이렉트하지 않음
+  if (user && path !== "/map" && !path.startsWith("/places/submission")) {
     throw redirect("/dashboard");
   }
 

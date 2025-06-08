@@ -27,6 +27,7 @@ export default function NavigationLayout({ loaderData }: Route.ComponentProps) {
                 name={user.user_metadata.name || "Anonymous"}
                 email={user.email}
                 avatarUrl={user.user_metadata.avatar_url}
+                role={user.user_metadata.role}
                 loading={false}
               />
             )
