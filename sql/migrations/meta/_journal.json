@@ -57,6 +57,13 @@
       "when": 1748332604000,
       "tag": "0009_sample_restaurants",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1749474834629,
+      "tag": "0010_thankful_madrox",
+      "breakpoints": true
     }
   ]
 }
