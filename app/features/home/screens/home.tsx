@@ -34,7 +34,7 @@ import { RestaurantCard } from "~/features/home/components/restaurant-card";
 import { colorSets } from "~/features/places/constants";
 
 import { createCustomOverlays } from "../components/custom-overlays";
-import { getAllTags, getRestaurants } from "../queries";
+import { getAllTags, getRestaurants } from "../../places/queries";
 
 // 전역 카카오 타입 선언
 declare global {

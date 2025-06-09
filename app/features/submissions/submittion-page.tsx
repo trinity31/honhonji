@@ -23,58 +23,12 @@ import { Label } from "~/core/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "~/core/components/ui/radio-group";
 import { cn } from "~/core/lib/utils";
 
+import { colorSets } from "../places/constants";
+import { getAllTags } from "../places/queries";
+
 export const loader = async ({ request }: Route.LoaderArgs) => {
-  return {
-    tags: [
-      {
-        id: "price",
-        label: "가성비",
-        icon: "DollarSign",
-        color:
-          "bg-amber-100 text-amber-600 border-amber-200 hover:bg-amber-200",
-      },
-      {
-        id: "solotable",
-        label: "1인석",
-        icon: "Users",
-        color: "bg-blue-100 text-blue-600 border-blue-200 hover:bg-blue-200",
-      },
-      {
-        id: "outlet",
-        label: "콘센트",
-        icon: "Zap",
-        color:
-          "bg-green-100 text-green-600 border-green-200 hover:bg-green-200",
-      },
-      {
-        id: "breakfast",
-        label: "아침식사",
-        icon: "Sunrise",
-        color:
-          "bg-yellow-100 text-yellow-600 border-yellow-200 hover:bg-yellow-200",
-      },
-      {
-        id: "night",
-        label: "야식",
-        icon: "Moon",
-        color:
-          "bg-indigo-100 text-indigo-600 border-indigo-200 hover:bg-indigo-200",
-      },
-      {
-        id: "diet",
-        label: "다이어트",
-        icon: "Salad",
-        color:
-          "bg-emerald-100 text-emerald-600 border-emerald-200 hover:bg-emerald-200",
-      },
-      {
-        id: "vegan",
-        label: "비건",
-        icon: "Leaf",
-        color: "bg-teal-100 text-teal-600 border-teal-200 hover:bg-teal-200",
-      },
-    ],
-  };
+  const tags = await getAllTags(request);
+  return { tags };
 };
 
 type PlaceType = "restaurant" | "walking_trail";
@@ -163,29 +117,32 @@ export default function ReportPlacePage({ loaderData }: Route.ComponentProps) {
   const navigation = useNavigation();
 
   const [selectedTags, setSelectedTags] = useState<
-    Array<{ id: string; label: string }>
+    Array<{ id: string; name: string }>
   >([]);
   const [placeName, setPlaceName] = useState("");
   const [placeType, setPlaceType] = useState<PlaceType>("restaurant");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   // 폼 제출 핸들러 - Zod 검증 포함
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setErrors({});
     setIsSubmitting(true);
-    
+
     const formData = new FormData(e.currentTarget);
     const formValues = {
       placeType: formData.get("placeType") as PlaceType,
       placeName: formData.get("placeName") as string,
       address: formData.get("address") as string,
-      detailAddress: placeType === "restaurant" ? formData.get("detailAddress") as string || "" : undefined,
-      tags: formData.get("tags") as string || "",
-      content: formData.get("content") as string || "",
+      detailAddress:
+        placeType === "restaurant"
+          ? (formData.get("detailAddress") as string) || ""
+          : undefined,
+      tags: (formData.get("tags") as string) || "",
+      content: (formData.get("content") as string) || "",
     };
-    
+
     try {
       // Zod 스키마로 검증
       formSchema.parse(formValues);
@@ -202,8 +159,13 @@ export default function ReportPlacePage({ loaderData }: Route.ComponentProps) {
         setErrors(errorMap);
         setIsSubmitting(false);
         // 첫 번째 에러 필드로 스크롤
-        const firstErrorField = document.getElementById(Object.keys(errorMap)[0]);
-        firstErrorField?.scrollIntoView({ behavior: "smooth", block: "center" });
+        const firstErrorField = document.getElementById(
+          Object.keys(errorMap)[0],
+        );
+        firstErrorField?.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
       }
     }
   };
@@ -212,7 +174,7 @@ export default function ReportPlacePage({ loaderData }: Route.ComponentProps) {
   const handlePlaceTypeChange = (type: PlaceType) => {
     setPlaceType(type);
     setErrors({}); // 타입 변경 시 오류 초기화
-    
+
     // 산책로로 변경 시 검색 결과 초기화
     if (type === "walking_trail") {
       setShowResults(false);
@@ -281,11 +243,11 @@ export default function ReportPlacePage({ loaderData }: Route.ComponentProps) {
     Sun,
   };
 
-  const toggleTag = (tag: { id: string; label: string; icon: string }) => {
+  const toggleTag = (tag: { id: number; name: string }) => {
     setSelectedTags((prev) =>
-      prev.some((t) => t.id === tag.id)
-        ? prev.filter((t) => t.id !== tag.id)
-        : [...prev, { id: tag.id, label: tag.label }],
+      prev.some((t) => t.id === String(tag.id))
+        ? prev.filter((t) => t.id !== String(tag.id))
+        : [...prev, { id: String(tag.id), name: tag.name }],
     );
   };
 
@@ -296,7 +258,9 @@ export default function ReportPlacePage({ loaderData }: Route.ComponentProps) {
       <form className="space-y-6" onSubmit={handleSubmit}>
         {/* 장소 타입 선택 */}
         <div>
-          <label className="mb-2 block font-medium">장소 타입 <span className="text-red-500">*</span></label>
+          <label className="mb-2 block font-medium">
+            장소 타입 <span className="text-red-500">*</span>
+          </label>
           <RadioGroup
             defaultValue="restaurant"
             className="flex gap-4"
@@ -421,23 +385,25 @@ export default function ReportPlacePage({ loaderData }: Route.ComponentProps) {
             <span className="text-muted-foreground">(여러 개 선택 가능)</span>
           </label>
           <div className="flex flex-wrap gap-2">
-            {tags.map((tag) => {
-              const isSelected = selectedTags.some((t) => t.id === tag.id);
-              const Icon = iconComponents[tag.icon];
+            {tags.map((tag, index) => {
+              // 태그 인덱스에 따라 색상 세트를 순환하며 적용
+              const colorIndex = index % colorSets.length;
+              const style = colorSets[colorIndex];
+
+              // 태그가 선택되었는지 확인 (문자열로 변환하여 비교)
+              const isSelected = selectedTags.some(
+                (t) => t.id === String(tag.id),
+              );
 
               return (
                 <Badge
                   key={tag.id}
                   variant="outline"
-                  className={`cursor-pointer rounded-full px-3 py-1 transition-colors ${tag.color} ${
-                    isSelected
-                      ? "ring-primary ring-2 ring-offset-2 ring-offset-white dark:ring-offset-slate-950"
-                      : ""
-                  }`}
+                  className={`rounded-full ${style.border} ${style.bg} px-3 py-1 ${style.text} ${style.hover} cursor-pointer transition-all ${isSelected ? "ring-primary font-semibold ring-2 ring-offset-1" : "opacity-80"} `}
                   onClick={() => toggleTag(tag)}
                 >
-                  {Icon && <Icon className="mr-1 h-3 w-3" />}
-                  {tag.label}
+                  {tag.name}
+                  {isSelected && <span className="ml-1">✓</span>}
                 </Badge>
               );
             })}
@@ -553,7 +519,7 @@ export default function ReportPlacePage({ loaderData }: Route.ComponentProps) {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="bg-primary text-primary-foreground hover:bg-primary/90 w-full rounded-md px-4 py-3 font-medium transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+            className="bg-primary text-primary-foreground hover:bg-primary/90 w-full rounded-md px-4 py-3 font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-70"
           >
             {isSubmitting ? "제출 중..." : "추천하기"}
           </button>
