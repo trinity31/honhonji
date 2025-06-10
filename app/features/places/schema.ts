@@ -1,20 +1,25 @@
 import { relations, sql } from "drizzle-orm";
-import { bigint, check, doublePrecision, integer, jsonb, pgEnum, pgPolicy, pgRole, pgTable, primaryKey, text, uuid } from "drizzle-orm/pg-core";
+import {
+  bigint,
+  check,
+  doublePrecision,
+  integer,
+  jsonb,
+  pgEnum,
+  pgPolicy,
+  pgRole,
+  pgTable,
+  primaryKey,
+  text,
+  uuid,
+} from "drizzle-orm/pg-core";
 import { anonRole, authenticatedRole, serviceRole } from "drizzle-orm/supabase";
 
-
-
 import { timestamps } from "~/core/db/helpers.server";
-
-
 
 import { profiles } from "../users/schema";
 import { PLACE_TYPES } from "./constants";
 import { TAG_CATEGORIES } from "./constants";
-
-
-
-
 
 // Supabase JWT 의 `role` 클레임이 "admin" 인 사용자용
 export const adminRole = pgRole("admin"); // 이미 DB에 있으면 .existing() 추가
@@ -153,10 +158,19 @@ export const placeToTags = pgTable(
       to: "public",
       using: sql`true`,
     }),
-    // ✏️ INSERT : admin only
-    pgPolicy("placeToTags_admin_insert", {
+    // ✏️ INSERT : authenticated users can add tags to their own places
+    pgPolicy("placeToTags_auth_insert", {
       for: "insert",
       to: authenticatedRole,
+      withCheck: sql`EXISTS (
+        SELECT 1 FROM ${places} 
+        WHERE ${places}.id = ${table.place_id} 
+        AND ${places}.submitted_by = auth.uid()
+      )`,
+    }),
+    pgPolicy("placeToTags_admin_insert", {
+      for: "insert",
+      to: adminRole,
       withCheck: sql`true`,
     }),
     // 🗑 DELETE : admin only

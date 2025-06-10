@@ -9,27 +9,52 @@ export const submitPlace = async (
     address,
     tags,
     description,
+    userId,
   }: {
     type: "restaurant" | "trail";
     name: string;
-    address: string;
-    tags?: string;
+    address: string | null;
+    tags?: number[];
     description?: string;
+    userId?: string;
   },
 ) => {
-  const { data, error } = await client
+  // 1. 장소 생성
+  const { data: place, error: placeError } = await client
     .from("places")
     .insert({
       type: type,
       name: name,
       address: address,
-      tags: tags,
       description: description,
+      status: "pending",
+      source: "user",
+      submitted_by: userId,
     })
     .select("*")
     .single();
-  if (error) {
-    throw error;
+
+  if (placeError) {
+    console.error('Error creating place:', placeError);
+    throw placeError;
   }
-  return data;
+
+  // 2. 태그가 있는 경우 태그 연결
+  if (tags && tags.length > 0) {
+    const { error: tagError } = await client
+      .from("place_to_tags")
+      .insert(
+        tags.map((tagId) => ({
+          place_id: place.id,
+          tag_id: tagId,
+        }))
+      );
+
+    if (tagError) {
+      console.error('Error linking tags:', tagError);
+      throw tagError;
+    }
+  }
+
+  return place;
 };

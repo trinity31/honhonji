@@ -1,4 +1,5 @@
 import type { LucideIcon } from "lucide-react";
+import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 
 import type { Route } from "./+types/submittion-page";
 
@@ -15,16 +16,32 @@ import {
   Zap,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useActionData, useFetcher, useNavigation } from "react-router";
+import { useFetcher, useLoaderData, useNavigation } from "react-router";
 import { z } from "zod";
 
 import { Badge } from "~/core/components/ui/badge";
 import { Label } from "~/core/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "~/core/components/ui/radio-group";
+import makeServerClient from "~/core/lib/supa-client.server";
 import { cn } from "~/core/lib/utils";
 
 import { colorSets } from "../places/constants";
 import { getAllTags } from "../places/queries";
+import { getLoggedInUserId } from "../users/queries";
+import { submitPlace } from "./mutations";
+
+type FetcherData = {
+  intent?: string;
+  success?: boolean;
+  error?: string;
+  message?: string;
+  errors?: Record<string, string>;
+  items?: Array<{
+    title?: string;
+    address?: string;
+    roadAddress?: string;
+  }>;
+};
 
 export const loader = async ({ request }: Route.LoaderArgs) => {
   const tags = await getAllTags(request);
@@ -39,7 +56,7 @@ const restaurantSchema = z.object({
   placeName: z.string().min(1, "장소명은 필수입니다"),
   address: z.string().min(1, "주소는 필수입니다"),
   detailAddress: z.string().optional(),
-  tags: z.string().optional(),
+  tags: z.string().transform((str) => (str ? JSON.parse(str) : [])),
   content: z.string().optional(),
 });
 
@@ -47,7 +64,7 @@ const walkingTrailSchema = z.object({
   placeType: z.literal("walking_trail"),
   placeName: z.string().min(1, "산책로 이름은 필수입니다"),
   address: z.string().optional(),
-  tags: z.string().optional(),
+  tags: z.string().transform((str) => (str ? JSON.parse(str) : [])),
   content: z.string().optional(),
 });
 
@@ -56,64 +73,139 @@ const formSchema = z.discriminatedUnion("placeType", [
   walkingTrailSchema,
 ]);
 
-// 네이버 지역 검색 API 호출 함수 (서버 사이드)
+// 폼 제출 및 네이버 지역 검색 API 호출을 처리하는 액션
 export const action = async ({ request }: Route.ActionArgs) => {
   const formData = await request.formData();
-  const placeName = formData.get("placeName") as string;
+  const intent = formData.get("intent");
 
-  console.log("검색어:", placeName);
+  // 검색 요청 처리
+  if (intent === "search") {
+    const placeName = formData.get("placeName") as string;
+    console.log("검색어:", placeName);
 
-  if (!placeName) {
-    return { error: "검색어가 필요합니다" };
+    if (!placeName) {
+      return { error: "검색어가 필요합니다" };
+    }
+
+    try {
+      // 네이버 API 설정
+      const NAVER_CLIENT_ID = process.env.NAVER_CLIENT_ID;
+      const NAVER_CLIENT_SECRET = process.env.NAVER_CLIENT_SECRET;
+
+      // API 키가 설정되지 않은 경우 에러 반환
+      if (!NAVER_CLIENT_ID || !NAVER_CLIENT_SECRET) {
+        console.error("네이버 API 키가 설정되지 않았습니다");
+        return { error: "API 키가 설정되지 않았습니다" };
+      }
+
+      let apiUrl = `https://openapi.naver.com/v1/search/local.json?query=${encodeURIComponent(placeName)}&display=10`;
+
+      console.log("API URL:", apiUrl);
+
+      // 네이버 지역 검색 API 호출
+      const response = await fetch(apiUrl, {
+        headers: {
+          "X-Naver-Client-Id": NAVER_CLIENT_ID,
+          "X-Naver-Client-Secret": NAVER_CLIENT_SECRET,
+        },
+      });
+
+      // API 호출 실패 시 에러 반환
+      if (!response.ok) {
+        throw new Error(`네이버 API 오류: ${response.status}`);
+      }
+
+      // 검색 결과 반환
+      const searchResult = await response.json();
+
+      // 검색 결과가 있는지 확인
+      if (searchResult && searchResult.items && searchResult.items.length > 0) {
+        return { success: true, items: searchResult.items, intent: "search" };
+      } else {
+        return {
+          success: false,
+          error: "검색 결과가 없습니다",
+          intent: "search",
+        };
+      }
+    } catch (error) {
+      console.error("네이버 API 호출 중 오류:", error);
+      return { error: "장소 검색 중 오류가 발생했습니다", intent: "search" };
+    }
   }
 
-  try {
-    // 네이버 API 설정
-    const NAVER_CLIENT_ID = process.env.NAVER_CLIENT_ID;
-    const NAVER_CLIENT_SECRET = process.env.NAVER_CLIENT_SECRET;
+  // 폼 제출 처리
+  if (intent === "submit") {
+    try {
+      // const formValues = {
+      //   placeType: formData.get("placeType") as PlaceType,
+      //   placeName: formData.get("placeName") as string,
+      //   address: formData.get("address") as string,
+      //   detailAddress: formData.get("detailAddress") as string | undefined,
+      //   tags: formData.get("tags") as string,
+      //   content: formData.get("content") as string,
+      // };
 
-    // API 키가 설정되지 않은 경우 에러 반환
-    if (!NAVER_CLIENT_ID || !NAVER_CLIENT_SECRET) {
-      console.error("네이버 API 키가 설정되지 않았습니다");
-      return { error: "API 키가 설정되지 않았습니다" };
+      // console.log(formValues);
+
+      const [client] = makeServerClient(request);
+      const userId = await getLoggedInUserId(client);
+      // const formData = await request.formData();
+
+      console.log("Form data entries:");
+      for (const [key, value] of formData.entries()) {
+        console.log(`${key}:`, value, typeof value);
+      }
+      // Zod 스키마로 검증
+      const { success, error, data } = formSchema.safeParse(
+        Object.fromEntries(formData),
+      );
+
+      // 검증 실패 시 에러 반환
+      if (!success) {
+        console.log(error);
+        return {
+          fieldErrors: error.flatten().fieldErrors,
+        };
+      }
+
+      console.log("Success:");
+      console.log(data);
+
+      // 여기서 실제 데이터베이스 저장 로직을 구현하세요
+      // 예: await saveToDatabase(result.data);
+      await submitPlace(client, {
+        type: data.placeType === "restaurant" ? "restaurant" : "trail",
+        name: data.placeName,
+        address: data.address || null, // undefined인 경우 null로 변환
+        tags: data.tags,
+        description: data.content,
+        userId: userId,
+      });
+
+      // 성공 응답 반환
+      return {
+        success: true,
+        message: "장소가 성공적으로 제출되었습니다!",
+        intent: "submit",
+      };
+    } catch (error) {
+      console.error("폼 제출 중 오류:", error);
+      return {
+        success: false,
+        error: "폼 제출 중 오류가 발생했습니다",
+        intent: "submit",
+      };
     }
-
-    let apiUrl = `https://openapi.naver.com/v1/search/local.json?query=${encodeURIComponent(placeName)}&display=10`;
-
-    console.log("API URL:", apiUrl);
-
-    // 네이버 지역 검색 API 호출
-    const response = await fetch(apiUrl, {
-      headers: {
-        "X-Naver-Client-Id": NAVER_CLIENT_ID,
-        "X-Naver-Client-Secret": NAVER_CLIENT_SECRET,
-      },
-    });
-
-    // API 호출 실패 시 에러 반환
-    if (!response.ok) {
-      throw new Error(`네이버 API 오류: ${response.status}`);
-    }
-
-    // 검색 결과 반환
-    const searchResult = await response.json();
-    //console.log("서버 응답 데이터:", searchResult);
-
-    // 검색 결과가 있는지 확인
-    if (searchResult && searchResult.items && searchResult.items.length > 0) {
-      return { success: true, items: searchResult.items };
-    } else {
-      return { success: false, error: "검색 결과가 없습니다" };
-    }
-  } catch (error) {
-    console.error("네이버 API 호출 중 오류:", error);
-    return { error: "장소 검색 중 오류가 발생했습니다" };
   }
+
+  // 알 수 없는 요청 유형
+  return { error: "잘못된 요청입니다" };
 };
 
-export default function ReportPlacePage({ loaderData }: Route.ComponentProps) {
-  // 서버 액션을 호출하기 위한 fetcher 생성
-  const fetcher = useFetcher();
+export default function ReportPlacePage() {
+  const { tags } = useLoaderData<typeof loader>();
+  const fetcher = useFetcher<FetcherData>();
   const navigation = useNavigation();
 
   const [selectedTags, setSelectedTags] = useState<
@@ -123,52 +215,55 @@ export default function ReportPlacePage({ loaderData }: Route.ComponentProps) {
   const [placeType, setPlaceType] = useState<PlaceType>("restaurant");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [address, setAddress] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+  const [showResults, setShowResults] = useState(false);
+  const [searchResults, setSearchResults] = useState<
+    Array<{ name: string; address: string; roadAddress: string }>
+  >([]);
 
-  // 폼 제출 핸들러 - Zod 검증 포함
+  // 폼 제출 핸들러
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setErrors({});
     setIsSubmitting(true);
 
     const formData = new FormData(e.currentTarget);
-    const formValues = {
-      placeType: formData.get("placeType") as PlaceType,
-      placeName: formData.get("placeName") as string,
-      address: formData.get("address") as string,
-      detailAddress:
-        placeType === "restaurant"
-          ? (formData.get("detailAddress") as string) || ""
-          : undefined,
-      tags: (formData.get("tags") as string) || "",
-      content: (formData.get("content") as string) || "",
-    };
+    formData.append("intent", "submit");
 
-    try {
-      // Zod 스키마로 검증
-      formSchema.parse(formValues);
-      // 검증 성공 시 폼 제출
-      e.currentTarget.submit();
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        // Zod 에러 메시지를 객체로 변환
-        const errorMap: Record<string, string> = {};
-        error.errors.forEach((err) => {
-          const field = err.path[0] as string;
-          errorMap[field] = err.message;
-        });
-        setErrors(errorMap);
-        setIsSubmitting(false);
+    // fetcher를 사용하여 폼 제출
+    fetcher.submit(formData, {
+      method: "post",
+    });
+  };
+
+  // 폼 제출 결과 처리
+  useEffect(() => {
+    if (fetcher.data?.intent === "submit") {
+      setIsSubmitting(false);
+
+      if (fetcher.data.success) {
+        // 성공 처리 (예: 성공 메시지 표시 또는 리다이렉트)
+        alert(fetcher.data.message || "제출이 완료되었습니다!");
+        // 폼 초기화 또는 리다이렉트 로직 추가
+      } else if (fetcher.data.errors) {
+        // 유효성 검사 오류 처리
+        setErrors(fetcher.data.errors);
         // 첫 번째 에러 필드로 스크롤
-        const firstErrorField = document.getElementById(
-          Object.keys(errorMap)[0],
-        );
-        firstErrorField?.scrollIntoView({
-          behavior: "smooth",
-          block: "center",
-        });
+        const firstErrorKey = Object.keys(fetcher.data.errors)[0];
+        if (firstErrorKey) {
+          const firstErrorField = document.getElementById(firstErrorKey);
+          firstErrorField?.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
+        }
+      } else if (fetcher.data.error) {
+        // 기타 오류 처리
+        alert(fetcher.data.error);
       }
     }
-  };
+  }, [fetcher.data]);
 
   // 장소 타입 변경 이벤트 처리
   const handlePlaceTypeChange = (type: PlaceType) => {
@@ -181,14 +276,6 @@ export default function ReportPlacePage({ loaderData }: Route.ComponentProps) {
       setSearchResults([]);
     }
   };
-  const [address, setAddress] = useState("");
-  const [isSearching, setIsSearching] = useState(false);
-  const [showResults, setShowResults] = useState(false);
-  const [searchResults, setSearchResults] = useState<
-    Array<{ name: string; address: string; roadAddress: string }>
-  >([]);
-
-  const { tags } = loaderData;
 
   // 페이지 로딩 상태 처리
   useEffect(() => {
@@ -207,7 +294,7 @@ export default function ReportPlacePage({ loaderData }: Route.ComponentProps) {
 
   // 검색 결과 처리
   useEffect(() => {
-    if (fetcher.data) {
+    if (fetcher.data?.intent === "search") {
       if (fetcher.data.error) {
         alert(fetcher.data.error);
       } else if (
@@ -217,10 +304,10 @@ export default function ReportPlacePage({ loaderData }: Route.ComponentProps) {
       ) {
         setShowResults(true);
         setSearchResults(
-          fetcher.data.items.map((item: any) => ({
-            name: item.title.replace(/<[^>]*>/g, ""),
-            address: item.address,
-            roadAddress: item.roadAddress,
+          fetcher.data.items.map((item) => ({
+            name: item.title?.replace(/<[^>]*>/g, "") || "",
+            address: item.address || "",
+            roadAddress: item.roadAddress || "",
           })),
         );
       } else {
@@ -244,10 +331,10 @@ export default function ReportPlacePage({ loaderData }: Route.ComponentProps) {
   };
 
   const toggleTag = (tag: { id: number; name: string }) => {
-    setSelectedTags((prev) =>
-      prev.some((t) => t.id === String(tag.id))
-        ? prev.filter((t) => t.id !== String(tag.id))
-        : [...prev, { id: String(tag.id), name: tag.name }],
+    setSelectedTags((prevTags) =>
+      prevTags.some((t) => t.id === String(tag.id))
+        ? prevTags.filter((t) => t.id !== String(tag.id))
+        : [...prevTags, { id: String(tag.id), name: tag.name }],
     );
   };
 
@@ -255,7 +342,7 @@ export default function ReportPlacePage({ loaderData }: Route.ComponentProps) {
     <div className="container mx-auto max-w-2xl px-4 py-8">
       <h1 className="mb-8 text-2xl font-bold">새로운 장소 추천</h1>
 
-      <form className="space-y-6" onSubmit={handleSubmit}>
+      <fetcher.Form method="post" className="space-y-6" onSubmit={handleSubmit}>
         {/* 장소 타입 선택 */}
         <div>
           <label className="mb-2 block font-medium">
@@ -314,13 +401,14 @@ export default function ReportPlacePage({ loaderData }: Route.ComponentProps) {
                   setIsSearching(true);
                   setShowResults(true);
 
-                  // fetcher.submit을 사용하여 서버 액션 호출
+                  // 서버 액션 호출을 위한 폼 데이터 준비
                   const formData = new FormData();
                   formData.append("placeName", placeName);
+                  formData.append("intent", "search");
 
+                  // fetcher를 사용하여 서버 액션 호출
                   fetcher.submit(formData, {
                     method: "post",
-                    action: "?/search",
                   });
                 }}
               >
@@ -524,7 +612,7 @@ export default function ReportPlacePage({ loaderData }: Route.ComponentProps) {
             {isSubmitting ? "제출 중..." : "추천하기"}
           </button>
         </div>
-      </form>
+      </fetcher.Form>
     </div>
   );
 }
