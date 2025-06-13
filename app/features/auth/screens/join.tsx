@@ -15,8 +15,10 @@ import type { Route } from "./+types/join";
 
 import { CheckCircle2Icon } from "lucide-react";
 import { useEffect, useRef } from "react";
+import WelcomeUser from "react-email-starter/emails/welcome-user";
 import { useTranslation } from "react-i18next";
 import { Form, Link, data } from "react-router";
+import { Resend } from "resend";
 import { z } from "zod";
 
 import FormButton from "~/core/components/form-button";
@@ -150,6 +152,18 @@ export async function action({ request }: Route.ActionArgs) {
   if (signInError) {
     return data({ error: signInError.message }, { status: 400 });
   }
+
+  const resendClient = new Resend(process.env.RESEND_API_KEY);
+
+  // Send welcome email
+  const { data: emailData, error: emailError } = await resendClient.emails.send(
+    {
+      from: "Trinity <trinity@mail.honhonji.space>",
+      to: validData.email,
+      subject: "혼혼지에 오신 것을 환영합니다",
+      react: <WelcomeUser username={validData.name} />,
+    },
+  );
 
   // Return success response
   return {
