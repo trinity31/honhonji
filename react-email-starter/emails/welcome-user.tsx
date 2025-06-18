@@ -32,16 +32,19 @@ export default function WelcomeUser({ username }: { username: string }) {
               <Heading as="h1" className="mb-4 text-3xl font-bold">
                 {username}님, 혼혼지에 오신 걸 환영해요!
               </Heading>
-              <Text className="text-xl">
-                혼자 있는 시간이 더 좋아지는 지도, 지금 시작해볼까요?
-              </Text>
+              <div className="text-purple-950">
+                <div className="text-2xl font-bold">
+                  혼자 있는 시간이 더 좋아지는 지도,
+                </div>
+                <div className="text-lg">지금 시작해볼까요?</div>
+              </div>
             </Section>
 
             {/* 소개 메시지 */}
             <Section className="p-8">
               <Text className="text-lg">
                 안녕하세요,{" "}
-                <span className="font-bold text-rose-600">{username}</span>님!
+                <span className="font-bold text-purple-950">{username}</span>님!
               </Text>
               <Text className="mt-4 text-gray-700">
                 혼혼지는 <strong>내 주변의 혼밥하기 좋은 맛집과 산책길</strong>
