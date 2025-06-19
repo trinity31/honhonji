@@ -11,6 +11,54 @@ export const PLACE_TYPES = [
     label: "산책로",
     value: "trail",
   },
+  {
+    label: "쇼핑",
+    value: "shopping",
+  },
+  {
+    label: "공원",
+    value: "park",
+  },
+  {
+    label: "도서관",
+    value: "library",
+  },
+  {
+    label: "박물관",
+    value: "museum",
+  },
+  {
+    label: "갤러리",
+    value: "gallery",
+  },
+  {
+    label: "사찰",
+    value: "temple",
+  },
+  {
+    label: "식물원",
+    value: "botanical_garden",
+  },
+  {
+    label: "공연장",
+    value: "performance_venue",
+  },
+  {
+    label: "영화관",
+    value: "cinema",
+  },
+  {
+    label: "전시장",
+    value: "exhibition_hall",
+  },
+  {
+    label: "스포츠시설",
+    value: "sports_facility",
+  },
+  {
+    label: "바/펍",
+    value: "bar_pub",
+  },
 ];
 
 export const TAG_CATEGORIES = [
