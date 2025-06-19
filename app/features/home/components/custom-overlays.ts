@@ -7,7 +7,7 @@
  */
 export function createCustomOverlays(
   marker: any,
-  restaurant: { name: string; description: string | null },
+  restaurant: { id: number; name: string; description: string | null },
 ) {
   const nameWindow = new window.kakao.maps.CustomOverlay({
     position: marker.getPosition(),
@@ -27,39 +27,60 @@ export function createCustomOverlays(
                   '>
                     <b>${restaurant.name}</b>
                   </div>`,
-    yAnchor: 2.1, // 마커 아래에 더 멀리 위치하도록 조정
-    zIndex: 1, // 마커보다 낮은 z-index로 마커가 위에 오도록 함
+    yAnchor: 2.1,
+    zIndex: 1,
   });
 
+  const descWindowContent = `
+    <div style='
+      padding: 16px;
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.12);
+      font-size: 14px;
+      line-height: 1.5;
+      color: #333;
+      min-width: 180px;
+    '>
+      <div style='
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: #222;
+      '>${restaurant.name}</div>
+      <div style='
+        font-size: 14px;
+        color: #555;
+        white-space: normal;
+        word-break: break-word;
+        margin-bottom: 12px;
+      '>${restaurant.description || "설명이 없습니다."}</div>
+      <button class="overlay-details-button" style='
+        display: block;
+        width: 100%;
+        padding: 8px 12px;
+        background-color: #007bff;
+        color: white;
+        text-decoration: none;
+        border-radius: 6px;
+        text-align: center;
+        font-weight: 500;
+        font-size: 13px;
+        border: none;
+        cursor: pointer;
+      '>
+        자세히 보기
+      </button>
+    </div>
+  `;
+
+  // This MUST be a CustomOverlay for getElement() to work.
   const descWindow = new window.kakao.maps.CustomOverlay({
+    content: descWindowContent,
     position: marker.getPosition(),
-    content: `
-                  <div style='
-                    padding: 16px;
-                    background: #ffffff;
-                    border-radius: 12px;
-                    box-shadow: 0 3px 10px rgba(0,0,0,0.12);
-                    font-size: 14px;
-                    line-height: 1.5;
-                    color: #333;
-                    min-width: 160px;
-                  '>
-                    <div style='
-                      font-size: 16px;
-                      font-weight: 600;
-                      margin-bottom: 8px;
-                      color: #222;
-                    '>${restaurant.name}</div>
-                    <div style='
-                      font-size: 14px;
-                      color: #555;
-                      white-space: normal;
-                      word-break: break-word;
-                    '>${restaurant.description || "설명이 없습니다."}</div>
-                  </div>
-                `,
-    yAnchor: 1.5,
-    zIndex: 2, // nameWindow보다 높은 z-index로 설정
+    clickable: true, // This is crucial for the button to work.
+    yAnchor: 2.1,
+    zIndex: 10, // Make sure it appears above other elements when open
   });
 
   return { nameWindow, descWindow };

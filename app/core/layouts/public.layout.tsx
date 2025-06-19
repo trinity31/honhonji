@@ -15,7 +15,7 @@ export async function loader({ request }: Route.LoaderArgs) {
   const path = url.pathname;
   
   // /map과 /places/submission 경로는 리다이렉트하지 않음
-  if (user && path !== "/map" && !path.startsWith("/places/submission")) {
+    if (user && path !== "/map" && !path.startsWith("/places/")) {
     throw redirect("/dashboard");
   }
 

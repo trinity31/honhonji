@@ -40,9 +40,12 @@ export default [
         "features/users/api/disconnect-provider.tsx",
       ),
     ]),
-  ...prefix("/cron", [
+    ...prefix("/cron", [
       route("/mailer", "features/cron/api/mailer.tsx"),
-      route("/notify-new-submission", "features/cron/api/notify-new-submission.tsx"),
+      route(
+        "/notify-new-submission",
+        "features/cron/api/notify-new-submission.tsx",
+      ),
     ]),
     ...prefix("/blog", [route("/og", "features/blog/api/og.tsx")]),
   ]),
@@ -84,6 +87,7 @@ export default [
       // Places routes
       ...prefix("/places", [
         route("/submission", "features/submissions/submittion-page.tsx"),
+        route("/:placeId", "features/places/pages/place-detail-page.tsx"),
         // Add more places related routes here
       ]),
     ]),
