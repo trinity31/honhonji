@@ -79,7 +79,7 @@ export function createCustomOverlays(
     content: descWindowContent,
     position: marker.getPosition(),
     clickable: true, // This is crucial for the button to work.
-    yAnchor: 2.1,
+    yAnchor: 1.2, // 오버레이 위치 조정 (마커에 더 가깝게)
     zIndex: 10, // Make sure it appears above other elements when open
   });
 

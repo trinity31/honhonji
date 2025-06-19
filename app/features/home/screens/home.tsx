@@ -1,11 +1,6 @@
 import type { Route } from "./+types/home";
 
-import {
-  Filter,
-  MapPin,
-  Search,
-  Star,
-} from "lucide-react";
+import { Filter, MapPin, Search, Star } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useRouteLoaderData } from "react-router";
