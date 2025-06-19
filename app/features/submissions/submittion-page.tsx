@@ -29,6 +29,7 @@ import { colorSets, PLACE_TYPES } from "../places/constants";
 import { getAllTags } from "../places/queries";
 import { getLoggedInUserId } from "../users/queries";
 import { submitPlace } from "./mutations";
+import { getCoordinatesFromAddress } from "~/core/lib/naver-geocoding";
 
 type FetcherData = {
   intent?: string;
@@ -41,6 +42,8 @@ type FetcherData = {
     address?: string;
     roadAddress?: string;
   }>;
+  latitude?: number;
+  longitude?: number;
 };
 
 export const loader = async ({ request }: Route.LoaderArgs) => {
@@ -56,31 +59,39 @@ const restaurantSchema = z.object({
   placeType: z.literal("restaurant"),
   placeName: z.string().min(1, "장소명은 필수입니다"),
   address: z.string().min(1, "주소는 필수입니다"),
-  detailAddress: z.string().optional(),
+  detailAddress: z.string().nullable().optional(),
   tags: z.string().transform((str) => (str ? JSON.parse(str) : [])),
   content: z.string().optional(),
+  latitude: z.number().optional(),
+  longitude: z.number().optional(),
 });
 
 const cafeSchema = z.object({
   placeType: z.literal("cafe"),
   placeName: z.string().min(1, "장소명은 필수입니다"),
   address: z.string().min(1, "주소는 필수입니다"),
-  detailAddress: z.string().optional(),
+  detailAddress: z.string().nullable().optional(),
   tags: z.string().transform((str) => (str ? JSON.parse(str) : [])),
   content: z.string().optional(),
+  latitude: z.number().optional(),
+  longitude: z.number().optional(),
 });
 
 // 기타 장소 타입 스키마 (태그 선택사항, 주소 선택사항)
+// "restaurant"와 "cafe"를 제외한 PlaceType 값들의 배열을 생성
+const otherPlaceTypeValues = PLACE_TYPES
+  .filter(t => t.value !== "restaurant" && t.value !== "cafe")
+  .map(t => t.value) as [PlaceType, ...PlaceType[]];
+
 const otherPlaceSchema = z.object({
-  placeType: z.enum(PLACE_TYPES
-    .filter(t => !['restaurant', 'cafe'].includes(t.value))
-    .map(t => t.value) as [string, ...string[]]
-  ),
+  placeType: z.enum(otherPlaceTypeValues), // z.enum에는 non-empty array가 필요합니다.
   placeName: z.string().min(1, "장소명은 필수입니다"),
   address: z.string().optional().or(z.literal('')), // 주소는 선택사항
-  detailAddress: z.string().optional(),
+  detailAddress: z.string().nullable().optional(),
   tags: z.string().transform(() => []), // 태그는 항상 빈 배열로 설정
   content: z.string().optional(),
+  latitude: z.number().optional(),
+  longitude: z.number().optional(),
 });
 
 const formSchema = z.discriminatedUnion("placeType", [
@@ -95,7 +106,7 @@ export const action = async ({ request }: Route.ActionArgs) => {
   const intent = formData.get("intent");
 
   // 검색 요청 처리
-  if (intent === "search") {
+  if (intent === "search") { /* 기존 검색 로직 유지 */
     const placeName = formData.get("placeName") as string;
     console.log("검색어:", placeName);
 
@@ -153,52 +164,78 @@ export const action = async ({ request }: Route.ActionArgs) => {
   // 폼 제출 처리
   if (intent === "submit") {
     try {
-      // const formValues = {
-      //   placeType: formData.get("placeType") as PlaceType,
-      //   placeName: formData.get("placeName") as string,
-      //   address: formData.get("address") as string,
-      //   detailAddress: formData.get("detailAddress") as string | undefined,
-      //   tags: formData.get("tags") as string,
-      //   content: formData.get("content") as string,
-      // };
-
-      // console.log(formValues);
-
       const [client] = makeServerClient(request);
       const userId = await getLoggedInUserId(client);
-      // const formData = await request.formData();
 
-      console.log("Form data entries:");
-      for (const [key, value] of formData.entries()) {
-        console.log(`${key}:`, value, typeof value);
-      }
+      const latString = formData.get("latitude") as string | null;
+      const lngString = formData.get("longitude") as string | null;
+
+      const parseOptionalFloat = (val: string | null): number | undefined => {
+        if (val === null || val.trim() === "") return undefined;
+        const num = parseFloat(val);
+        return isNaN(num) ? undefined : num;
+      };
+
       // Zod 스키마로 검증
-      const { success, error, data } = formSchema.safeParse(
-        Object.fromEntries(formData),
-      );
+      const parsedData = {
+        placeType: formData.get("placeType"),
+        placeName: formData.get("placeName"),
+        address: formData.get("address"),
+        detailAddress: formData.get("detailAddress"),
+        tags: formData.get("tags"),
+        content: formData.get("content"),
+        latitude: parseOptionalFloat(latString),
+        longitude: parseOptionalFloat(lngString),
+      };
+
+      const addressString = formData.get("address") as string | null;
+      let latitude: number | undefined = undefined;
+      let longitude: number | undefined = undefined;
+
+      if (addressString && addressString.trim() !== "") {
+        console.log("[Server Action] Performing geocoding for address:", addressString);
+        const coordinates = await getCoordinatesFromAddress(addressString.trim());
+        if (coordinates) {
+          latitude = coordinates.latitude;
+          longitude = coordinates.longitude;
+          console.log("[Server Action] Geocoding successful:", { latitude, longitude });
+        } else {
+          console.log("[Server Action] Geocoding failed for address:", addressString);
+        }
+      } else {
+        console.log("[Server Action] No address provided, skipping geocoding.");
+      }
+
+      const submissionDataWithCoords = {
+        ...parsedData,
+        latitude,
+        longitude,
+      };
+
+      console.log("[Server Action] Data for Zod validation:", submissionDataWithCoords);
+      const { success, error, data } = formSchema.safeParse(submissionDataWithCoords);
 
       // 검증 실패 시 에러 반환
       if (!success) {
-        console.log(error);
+        console.error("Zod validation failed:", error.flatten().fieldErrors);
         return {
           fieldErrors: error.flatten().fieldErrors,
+          message: "입력 값을 확인해주세요.",
         };
       }
 
-      console.log("Success:");
-      console.log(data);
+      console.log("Zod validation successful, submitting data with coordinates:", data);
 
       // 데이터베이스에 저장
       await submitPlace(client, {
-        // @ts-ignore - submitPlace의 타입 정의가 업데이트가 필요하지만, 현재는 무시
-        type: data.placeType,
-        name: data.placeName,
-        // 주소가 빈 문자열인 경우 null로 저장
+        placeType: data.placeType, // Zod에서 추론된 타입을 사용
+        placeName: data.placeName,
         address: data.address?.trim() || null,
-        // 레스토랑/카페인 경우에만 태그 저장, 그 외는 빈 배열
-        tags: ['restaurant', 'cafe'].includes(data.placeType) ? data.tags : [],
-        description: data.content,
+        tags: (['restaurant', 'cafe'] as PlaceType[]).includes(data.placeType) ? data.tags : [],
+        content: data.content,
         userId: userId,
+        latitude: data.latitude,
+        longitude: data.longitude,
       });
 
       // 성공 응답 반환
@@ -238,6 +275,8 @@ export default function ReportPlacePage() {
   const [searchResults, setSearchResults] = useState<
     Array<{ name: string; address: string; roadAddress: string }>
   >([]);
+  const [latitude, setLatitude] = useState<number | undefined>(undefined);
+  const [longitude, setLongitude] = useState<number | undefined>(undefined);
 
   // 폼 제출 핸들러
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -302,6 +341,8 @@ export default function ReportPlacePage() {
     setAddress("");
     setPlaceName("");
     setShowResults(false);
+    setLatitude(undefined);
+    setLongitude(undefined);
   };
 
   // 태그 토글 핸들러
@@ -333,7 +374,7 @@ export default function ReportPlacePage() {
         setSearchResults([]);
         setShowResults(true); // 검색 결과 없음 메시지를 표시하기 위해
       }
-    }
+    } 
   }, [fetcher.data, fetcher.state]);
 
   return (
@@ -528,6 +569,7 @@ export default function ReportPlacePage() {
             name="address"
             value={address}
             onChange={(e) => setAddress(e.target.value)}
+            
             className="w-full rounded-md border p-2"
             placeholder="주소를 검색하거나 직접 입력해주세요"
             required={['restaurant', 'cafe'].includes(placeType)}
@@ -569,9 +611,12 @@ export default function ReportPlacePage() {
 
         {/* 제출 버튼 */}
         <div className="pt-4">
+          <input type="hidden" name="latitude" value={latitude || ""} />
+          <input type="hidden" name="longitude" value={longitude || ""} />
+
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || fetcher.state === "loading"}
             className="bg-primary text-primary-foreground hover:bg-primary/90 w-full rounded-md px-4 py-3 font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-70"
           >
             {isSubmitting ? "제출 중..." : "추천하기"}

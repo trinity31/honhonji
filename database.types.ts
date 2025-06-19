@@ -326,7 +326,22 @@ export type Database = {
       place_sources: "user" | "admin"
       place_status: "pending" | "approved" | "rejected"
       place_type: "restaurant" | "walk"
-      place_types: "restaurant" | "trail"
+      place_types:
+        | "restaurant"
+        | "trail"
+        | "cafe"
+        | "shopping"
+        | "park"
+        | "library"
+        | "museum"
+        | "gallery"
+        | "temple"
+        | "botanical_garden"
+        | "performance_venue"
+        | "cinema"
+        | "exhibition_hall"
+        | "sports_facility"
+        | "bar_pub"
       price_level: "cheap" | "moderate" | "expensive"
       submission_status: "pending" | "approved" | "rejected"
       submission_type: "new" | "update" | "removal"
@@ -456,7 +471,23 @@ export const Constants = {
       place_sources: ["user", "admin"],
       place_status: ["pending", "approved", "rejected"],
       place_type: ["restaurant", "walk"],
-      place_types: ["restaurant", "trail"],
+      place_types: [
+        "restaurant",
+        "trail",
+        "cafe",
+        "shopping",
+        "park",
+        "library",
+        "museum",
+        "gallery",
+        "temple",
+        "botanical_garden",
+        "performance_venue",
+        "cinema",
+        "exhibition_hall",
+        "sports_facility",
+        "bar_pub",
+      ],
       price_level: ["cheap", "moderate", "expensive"],
       submission_status: ["pending", "approved", "rejected"],
       submission_type: ["new", "update", "removal"],

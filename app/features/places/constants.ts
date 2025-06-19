@@ -59,7 +59,7 @@ export const PLACE_TYPES = [
     label: "바/펍",
     value: "bar_pub",
   },
-];
+] as const;
 
 export const TAG_CATEGORIES = [
   {
@@ -166,3 +166,5 @@ export const colorSets = [
     hover: "hover:bg-cyan-100",
   },
 ];
+
+export type PlaceType = typeof PLACE_TYPES[number]["value"];
