@@ -33,8 +33,8 @@ import i18next from "~/core/lib/i18next.server";
 import { RestaurantCard } from "~/features/home/components/restaurant-card";
 import { colorSets } from "~/features/places/constants";
 
-import { createCustomOverlays } from "../components/custom-overlays";
 import { getAllTags, getRestaurants } from "../../places/queries";
+import { createCustomOverlays } from "../components/custom-overlays";
 
 // 전역 카카오 타입 선언
 declare global {
@@ -67,30 +67,30 @@ export default function Home({ loaderData }: Route.ComponentProps) {
   const { t } = useTranslation();
   const mapRef = useRef<any>(null);
   const [userLocation, setUserLocation] = useState({
-    lat: 37.5665,
-    lng: 126.978,
+    lat: 37.470276,
+    lng: 127.043191,
   }); // 기본값은 서울시청
   const rootData = useRouteLoaderData("root");
   const kakaoAppKey = rootData?.env?.KAKAO_APP_KEY || "";
-  
+
   // 선택된 태그 상태 관리
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  
+
   // 필터링된 식당 목록
-  const filteredRestaurants = selectedTags.length > 0
-    ? loaderData.restaurants.filter(restaurant => 
-        restaurant.tags?.some(tag => 
-          selectedTags.includes(tag.name)
+  const filteredRestaurants =
+    selectedTags.length > 0
+      ? loaderData.restaurants.filter((restaurant) =>
+          restaurant.tags?.some((tag) => selectedTags.includes(tag.name)),
         )
-      )
-    : loaderData.restaurants;
-    
+      : loaderData.restaurants;
+
   // 태그 클릭 핸들러 - 선택/해제 토글
   const handleTagClick = (tagName: string) => {
-    setSelectedTags(prev => 
-      prev.includes(tagName)
-        ? prev.filter(tag => tag !== tagName) // 이미 선택된 태그라면 해제
-        : [...prev, tagName] // 선택되지 않은 태그라면 추가
+    setSelectedTags(
+      (prev) =>
+        prev.includes(tagName)
+          ? prev.filter((tag) => tag !== tagName) // 이미 선택된 태그라면 해제
+          : [...prev, tagName], // 선택되지 않은 태그라면 추가
     );
   };
 
@@ -98,34 +98,31 @@ export default function Home({ loaderData }: Route.ComponentProps) {
   const markersRef = useRef<any[]>([]);
   const nameWindowsRef = useRef<any[]>([]);
   const descWindowsRef = useRef<any[]>([]);
-  
+
   // 지도에 표시된 마커 업데이트 함수
   const updateMapMarkers = () => {
     if (!mapRef.current) return;
-    
+
     // 기존 마커와 오버레이 제거
-    markersRef.current.forEach(marker => marker.setMap(null));
-    nameWindowsRef.current.forEach(overlay => overlay.setMap(null));
-    descWindowsRef.current.forEach(overlay => overlay.setMap(null));
-    
+    markersRef.current.forEach((marker) => marker.setMap(null));
+    nameWindowsRef.current.forEach((overlay) => overlay.setMap(null));
+    descWindowsRef.current.forEach((overlay) => overlay.setMap(null));
+
     // 배열 초기화
     markersRef.current = [];
     nameWindowsRef.current = [];
     descWindowsRef.current = [];
-    
+
     // 필터링된 식당만 표시
     filteredRestaurants.forEach((restaurant) => {
       if (!restaurant.lat || !restaurant.lng) return;
-      
+
       const marker = new window.kakao.maps.Marker({
         map: mapRef.current,
-        position: new window.kakao.maps.LatLng(
-          restaurant.lat,
-          restaurant.lng,
-        ),
+        position: new window.kakao.maps.LatLng(restaurant.lat, restaurant.lng),
         title: restaurant.name,
       });
-      
+
       // 커스텀 오버레이 생성
       const { nameWindow, descWindow } = createCustomOverlays(
         marker,
@@ -142,29 +139,25 @@ export default function Home({ loaderData }: Route.ComponentProps) {
       });
 
       // 지도 클릭 시 description 창 닫고 이름만 다시 표시
-      window.kakao.maps.event.addListener(
-        mapRef.current,
-        "click",
-        function () {
-          descWindow.setMap(null);
-          nameWindow.setMap(mapRef.current);
-        },
-      );
-      
+      window.kakao.maps.event.addListener(mapRef.current, "click", function () {
+        descWindow.setMap(null);
+        nameWindow.setMap(mapRef.current);
+      });
+
       // 참조 배열에 추가
       markersRef.current.push(marker);
       nameWindowsRef.current.push(nameWindow);
       descWindowsRef.current.push(descWindow);
     });
   };
-  
+
   // 선택된 태그가 변경될 때 마커 업데이트
   useEffect(() => {
     if (mapRef.current) {
       updateMapMarkers();
     }
   }, [selectedTags]);
-  
+
   useEffect(() => {
     const script = document.createElement("script");
     console.log("kakaoAppKey", kakaoAppKey);
@@ -240,12 +233,12 @@ export default function Home({ loaderData }: Route.ComponentProps) {
     };
 
     // 초기 위치 가져오기
-    getUserLocation();
+    //getUserLocation();
 
     // 지도가 초기화된 후 1초 후에 다시 위치 가져오기 시도
     const mapCheckInterval = setInterval(() => {
       if (mapRef.current) {
-        getUserLocation();
+        // getUserLocation();
         clearInterval(mapCheckInterval);
       }
     }, 1000);
@@ -363,17 +356,15 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             // 태그 인덱스에 따라 색상 세트를 순환하며 적용
             const colorIndex = index % colorSets.length;
             const style = colorSets[colorIndex];
-            
+
             // 태그가 선택되었는지 확인
             const isSelected = selectedTags.includes(tag.name);
-            
+
             return (
               <Badge
                 key={tag.id}
                 variant="outline"
-                className={`rounded-full ${style.border} ${style.bg} px-3 py-1 ${style.text} ${style.hover} cursor-pointer transition-all
-                  ${isSelected ? 'ring-2 ring-offset-1 ring-primary font-semibold' : 'opacity-80'}
-                `}
+                className={`rounded-full ${style.border} ${style.bg} px-3 py-1 ${style.text} ${style.hover} cursor-pointer transition-all ${isSelected ? "ring-primary font-semibold ring-2 ring-offset-1" : "opacity-80"} `}
                 onClick={() => handleTagClick(tag.name)}
               >
                 {tag.name}
@@ -483,22 +474,28 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             <TabsContent value="list" className="mt-0">
               {selectedTags.length > 0 && (
                 <div className="mb-4 px-1">
-                  <p className="text-sm text-muted-foreground">
-                    <span className="font-medium text-primary">{filteredRestaurants.length}</span>개의 
-                    식당이 선택된 태그 
-                    <span className="font-medium text-primary">
-                      {selectedTags.map((tag, i) => 
-                        i === selectedTags.length - 1 ? `'${tag}'` : `'${tag}', `
+                  <p className="text-muted-foreground text-sm">
+                    <span className="text-primary font-medium">
+                      {filteredRestaurants.length}
+                    </span>
+                    개의 식당이 선택된 태그
+                    <span className="text-primary font-medium">
+                      {selectedTags.map((tag, i) =>
+                        i === selectedTags.length - 1
+                          ? `'${tag}'`
+                          : `'${tag}', `,
                       )}
-                    </span>에 
-                    해당합니다.
+                    </span>
+                    에 해당합니다.
                   </p>
                 </div>
               )}
-              
+
               {filteredRestaurants.length === 0 ? (
                 <div className="flex h-40 w-full items-center justify-center rounded-md border border-dashed">
-                  <p className="text-muted-foreground">선택한 태그에 해당하는 식당이 없습니다.</p>
+                  <p className="text-muted-foreground">
+                    선택한 태그에 해당하는 식당이 없습니다.
+                  </p>
                 </div>
               ) : (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
