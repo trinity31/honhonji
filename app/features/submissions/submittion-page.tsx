@@ -25,7 +25,7 @@ import { RadioGroup, RadioGroupItem } from "~/core/components/ui/radio-group";
 import makeServerClient from "~/core/lib/supa-client.server";
 import { cn } from "~/core/lib/utils";
 
-import { colorSets } from "../places/constants";
+import { colorSets, PLACE_TYPES } from "../places/constants";
 import { getAllTags } from "../places/queries";
 import { getLoggedInUserId } from "../users/queries";
 import { submitPlace } from "./mutations";
@@ -48,9 +48,10 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
   return { tags };
 };
 
-type PlaceType = "restaurant" | "walking_trail";
+type PlaceType = (typeof PLACE_TYPES)[number]['value'];
 
 // Zod 스키마 정의 - 장소 타입에 따라 다른 검증 로직 적용
+// 레스토랑/카페 스키마 (태그 필수)
 const restaurantSchema = z.object({
   placeType: z.literal("restaurant"),
   placeName: z.string().min(1, "장소명은 필수입니다"),
@@ -60,17 +61,32 @@ const restaurantSchema = z.object({
   content: z.string().optional(),
 });
 
-const walkingTrailSchema = z.object({
-  placeType: z.literal("walking_trail"),
-  placeName: z.string().min(1, "산책로 이름은 필수입니다"),
-  address: z.string().optional(),
+const cafeSchema = z.object({
+  placeType: z.literal("cafe"),
+  placeName: z.string().min(1, "장소명은 필수입니다"),
+  address: z.string().min(1, "주소는 필수입니다"),
+  detailAddress: z.string().optional(),
   tags: z.string().transform((str) => (str ? JSON.parse(str) : [])),
+  content: z.string().optional(),
+});
+
+// 기타 장소 타입 스키마 (태그 선택사항, 주소 선택사항)
+const otherPlaceSchema = z.object({
+  placeType: z.enum(PLACE_TYPES
+    .filter(t => !['restaurant', 'cafe'].includes(t.value))
+    .map(t => t.value) as [string, ...string[]]
+  ),
+  placeName: z.string().min(1, "장소명은 필수입니다"),
+  address: z.string().optional().or(z.literal('')), // 주소는 선택사항
+  detailAddress: z.string().optional(),
+  tags: z.string().transform(() => []), // 태그는 항상 빈 배열로 설정
   content: z.string().optional(),
 });
 
 const formSchema = z.discriminatedUnion("placeType", [
   restaurantSchema,
-  walkingTrailSchema,
+  cafeSchema,
+  otherPlaceSchema,
 ]);
 
 // 폼 제출 및 네이버 지역 검색 API 호출을 처리하는 액션
@@ -172,13 +188,15 @@ export const action = async ({ request }: Route.ActionArgs) => {
       console.log("Success:");
       console.log(data);
 
-      // 여기서 실제 데이터베이스 저장 로직을 구현하세요
-      // 예: await saveToDatabase(result.data);
+      // 데이터베이스에 저장
       await submitPlace(client, {
-        type: data.placeType === "restaurant" ? "restaurant" : "trail",
+        // @ts-ignore - submitPlace의 타입 정의가 업데이트가 필요하지만, 현재는 무시
+        type: data.placeType,
         name: data.placeName,
-        address: data.address || null, // undefined인 경우 null로 변환
-        tags: data.tags,
+        // 주소가 빈 문자열인 경우 null로 저장
+        address: data.address?.trim() || null,
+        // 레스토랑/카페인 경우에만 태그 저장, 그 외는 빈 배열
+        tags: ['restaurant', 'cafe'].includes(data.placeType) ? data.tags : [],
         description: data.content,
         userId: userId,
       });
@@ -206,7 +224,6 @@ export const action = async ({ request }: Route.ActionArgs) => {
 export default function ReportPlacePage() {
   const { tags } = useLoaderData<typeof loader>();
   const fetcher = useFetcher<FetcherData>();
-  const navigation = useNavigation();
 
   const [selectedTags, setSelectedTags] = useState<
     Array<{ id: string; name: string }>
@@ -227,11 +244,35 @@ export default function ReportPlacePage() {
     e.preventDefault();
     setErrors({});
     setIsSubmitting(true);
+    setShowResults(false); // 제출 시 검색 결과 숨기기
 
     const formData = new FormData(e.currentTarget);
+    const formValues = Object.fromEntries(formData.entries()) as Record<
+      string,
+      string
+    >;
+
+    const addressValue = formValues.address?.trim() || "";
+    if (['restaurant', 'cafe'].includes(placeType) && !addressValue) {
+      setErrors((prev) => ({
+        ...prev,
+        address: "주소는 필수 입력 항목입니다.",
+      }));
+      setIsSubmitting(false);
+      return;
+    }
+
+    formData.set("address", addressValue);
+    formData.set("placeType", placeType);
+
+    if (['restaurant', 'cafe'].includes(placeType)) {
+      formData.set("tags", JSON.stringify(selectedTags.map((tag) => tag.id)));
+    } else {
+      formData.set("tags", "[]");
+    }
+
     formData.append("intent", "submit");
 
-    // fetcher를 사용하여 폼 제출
     fetcher.submit(formData, {
       method: "post",
     });
@@ -243,100 +284,57 @@ export default function ReportPlacePage() {
       setIsSubmitting(false);
 
       if (fetcher.data.success) {
-        // 성공 처리 (예: 성공 메시지 표시 또는 리다이렉트)
         alert(fetcher.data.message || "제출이 완료되었습니다!");
-        // 폼 초기화 또는 리다이렉트 로직 추가
+        // TODO: 폼 초기화 또는 페이지 이동
       } else if (fetcher.data.errors) {
-        // 유효성 검사 오류 처리
         setErrors(fetcher.data.errors);
-        // 첫 번째 에러 필드로 스크롤
-        const firstErrorKey = Object.keys(fetcher.data.errors)[0];
-        if (firstErrorKey) {
-          const firstErrorField = document.getElementById(firstErrorKey);
-          firstErrorField?.scrollIntoView({
-            behavior: "smooth",
-            block: "center",
-          });
-        }
       } else if (fetcher.data.error) {
-        // 기타 오류 처리
         alert(fetcher.data.error);
       }
     }
   }, [fetcher.data]);
 
-  // 장소 타입 변경 이벤트 처리
+  // 장소 타입 변경 핸들러
   const handlePlaceTypeChange = (type: PlaceType) => {
     setPlaceType(type);
-    setErrors({}); // 타입 변경 시 오류 초기화
-
-    // 산책로로 변경 시 검색 결과 초기화
-    if (type === "walking_trail") {
-      setShowResults(false);
-      setSearchResults([]);
-    }
+    setErrors({});
+    setSelectedTags([]);
+    setAddress("");
+    setPlaceName("");
+    setShowResults(false);
   };
 
-  // 페이지 로딩 상태 처리
-  useEffect(() => {
-    setIsSearching(navigation.state === "submitting");
-  }, [navigation.state]);
-
-  // fetcher 상태 관리
-  useEffect(() => {
-    // 로딩 상태 관리
-    if (fetcher.state === "submitting") {
-      setIsSearching(true);
-    } else if (fetcher.state === "idle") {
-      setIsSearching(false);
-    }
-  }, [fetcher.state]);
+  // 태그 토글 핸들러
+  const toggleTag = (tag: { id: number; name: string }) => {
+    setSelectedTags((prev) => {
+      const existing = prev.find((t) => t.id === String(tag.id));
+      if (existing) {
+        return prev.filter((t) => t.id !== String(tag.id));
+      } else {
+        return [...prev, { id: String(tag.id), name: tag.name }];
+      }
+    });
+  };
 
   // 검색 결과 처리
   useEffect(() => {
-    if (fetcher.data?.intent === "search") {
-      if (fetcher.data.error) {
-        alert(fetcher.data.error);
-      } else if (
-        fetcher.data.success &&
-        fetcher.data.items &&
-        fetcher.data.items.length > 0
-      ) {
-        setShowResults(true);
+    if (fetcher.state === "idle" && fetcher.data?.intent === "search") {
+      setIsSearching(false);
+      if (fetcher.data.success && fetcher.data.items) {
         setSearchResults(
           fetcher.data.items.map((item) => ({
-            name: item.title?.replace(/<[^>]*>/g, "") || "",
+            name: item.title || "",
             address: item.address || "",
             roadAddress: item.roadAddress || "",
           })),
         );
+        setShowResults(true);
       } else {
         setSearchResults([]);
-        alert("검색 결과가 없습니다.");
+        setShowResults(true); // 검색 결과 없음 메시지를 표시하기 위해
       }
     }
-  }, [fetcher.data]);
-
-  const iconComponents: Record<string, LucideIcon> = {
-    Wifi,
-    Zap,
-    Clock,
-    Moon,
-    Users,
-    Heart,
-    DollarSign,
-    MapPin,
-    Utensils,
-    Sun,
-  };
-
-  const toggleTag = (tag: { id: number; name: string }) => {
-    setSelectedTags((prevTags) =>
-      prevTags.some((t) => t.id === String(tag.id))
-        ? prevTags.filter((t) => t.id !== String(tag.id))
-        : [...prevTags, { id: String(tag.id), name: tag.name }],
-    );
-  };
+  }, [fetcher.data, fetcher.state]);
 
   return (
     <div className="container mx-auto max-w-2xl px-4 py-8">
@@ -348,232 +346,199 @@ export default function ReportPlacePage() {
           <label className="mb-2 block font-medium">
             장소 타입 <span className="text-red-500">*</span>
           </label>
-          <RadioGroup
-            defaultValue="restaurant"
-            className="flex gap-4"
-            value={placeType}
-            onValueChange={(value) => handlePlaceTypeChange(value as PlaceType)}
-          >
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="restaurant" id="restaurant" />
-              <Label htmlFor="restaurant">식당/카페</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="walking_trail" id="walking_trail" />
-              <Label htmlFor="walking_trail">산책로</Label>
-            </div>
-          </RadioGroup>
+          <div className="flex flex-wrap gap-2">
+            {PLACE_TYPES.map((type) => {
+              const isSelected = placeType === type.value;
+              const colorIndex =
+                PLACE_TYPES.findIndex((t) => t.value === type.value) %
+                colorSets.length;
+              const style = colorSets[colorIndex];
+              return (
+                <div key={type.value} className="flex items-center">
+                  <input
+                    type="radio"
+                    id={type.value}
+                    name="placeType"
+                    value={type.value}
+                    checked={isSelected}
+                    onChange={() =>
+                      handlePlaceTypeChange(type.value as PlaceType)
+                    }
+                    className="sr-only"
+                  />
+                  <label
+                    htmlFor={type.value}
+                    className={`cursor-pointer rounded-full px-4 py-2 text-sm font-medium transition-all ${
+                      isSelected
+                        ? `${style.bg} ${style.text} ${style.border} font-semibold`
+                        : "bg-gray-100 text-gray-700 border border-gray-200 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700 dark:hover:bg-gray-700"
+                    }`}
+                  >
+                    {type.label}
+                  </label>
+                </div>
+              );
+            })}
+          </div>
           <input type="hidden" name="placeType" value={placeType} />
         </div>
 
-        {/* 장소명 */}
+        {/* 장소명 및 주소 검색 */}
         <div>
           <label htmlFor="placeName" className="mb-2 block font-medium">
             장소명 <span className="text-red-500">*</span>
           </label>
-
-          {placeType === "restaurant" ? (
-            /* 식당/카페인 경우 네이버 검색 UI 표시 */
-            <div className="flex space-x-2">
+          <div className="flex items-start gap-2">
+            <div className="flex-1 space-y-2">
               <input
                 type="text"
                 id="placeName"
                 name="placeName"
                 required
                 value={placeName}
-                onChange={(e) => setPlaceName(e.target.value)}
-                className={`flex-1 rounded-md border p-2 ${errors.placeName ? "border-red-500" : ""}`}
-                placeholder="예) 혼밥카페 연남점"
-              />
-              {errors.placeName && (
-                <p className="mt-1 text-sm text-red-500">{errors.placeName}</p>
-              )}
-              <button
-                id="searchButton"
-                type="button"
-                className="rounded-md bg-gray-700 px-4 py-2 text-white transition-colors hover:bg-gray-600 dark:bg-gray-800 dark:hover:bg-gray-700"
-                disabled={isSearching}
-                onClick={() => {
-                  if (!placeName.trim()) {
-                    alert("장소명을 입력해주세요.");
-                    return;
+                onChange={(e) => {
+                  setPlaceName(e.target.value);
+                  if (showResults) {
+                    setShowResults(false);
                   }
-                  setIsSearching(true);
-                  setShowResults(true);
-
-                  // 서버 액션 호출을 위한 폼 데이터 준비
-                  const formData = new FormData();
-                  formData.append("placeName", placeName);
-                  formData.append("intent", "search");
-
-                  // fetcher를 사용하여 서버 액션 호출
-                  fetcher.submit(formData, {
-                    method: "post",
-                  });
                 }}
-              >
-                {isSearching ? "검색 중..." : "검색"}
-              </button>
-            </div>
-          ) : (
-            /* 산책로인 경우 직접 입력 UI 표시 */
-            <div>
-              <input
-                type="text"
-                id="placeName"
-                name="placeName"
-                required
-                value={placeName}
-                onChange={(e) => setPlaceName(e.target.value)}
-                className={`w-full rounded-md border p-2 ${errors.placeName ? "border-red-500" : ""}`}
-                placeholder="산책로 이름을 직접 입력해주세요 (예: 연남동 갈대역 산책로)"
+                className={`w-full rounded-md border p-2 ${
+                  errors.placeName ? "border-red-500" : ""
+                }`}
+                placeholder="장소명을 입력하고 검색 버튼을 누르세요"
               />
               {errors.placeName && (
-                <p className="mt-1 text-sm text-red-500">{errors.placeName}</p>
+                <p className="mt-1 text-sm text-red-500">
+                  {errors.placeName}
+                </p>
               )}
-              <p className="mt-1 text-xs text-gray-500">
-                * 산책로는 직접 입력해주세요. 주변 랜드마크나 지역명을 포함하면
-                더 쉽게 찾을 수 있습니다.
-              </p>
+
+              {/* 검색 결과 목록 */}
+              {showResults && (
+                <ul className="mt-2 rounded-md border bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800">
+                  {isSearching ? (
+                    <li className="p-3 text-center text-gray-500">검색 중...</li>
+                  ) : searchResults.length > 0 ? (
+                    searchResults.map((item, index) => (
+                      <li key={index}>
+                        <button
+                          type="button"
+                          className="w-full p-3 text-left hover:bg-gray-100 dark:hover:bg-gray-700"
+                          onClick={() => {
+                            setPlaceName(item.name.replace(/<[^>]*>?/gm, ''));
+                            setAddress(item.roadAddress || item.address);
+                            setShowResults(false);
+                          }}
+                        >
+                          <span
+                            className="font-semibold"
+                            dangerouslySetInnerHTML={{ __html: item.name }}
+                          ></span>
+                          <br />
+                          <span className="text-sm text-gray-500">
+                            {item.roadAddress || item.address}
+                          </span>
+                        </button>
+                      </li>
+                    ))
+                  ) : (
+                    <li className="p-3 text-center text-gray-500">
+                      검색 결과가 없습니다.
+                    </li>
+                  )}
+                </ul>
+              )}
             </div>
-          )}
 
-          {/* 검색 결과 표시 */}
-          {showResults && searchResults.length > 0 && (
-            <div className="mt-2 rounded-md border bg-white p-2 dark:bg-gray-800">
-              <p className="mb-2 text-sm text-gray-500">
-                검색 결과를 선택하세요:
-              </p>
-              <ul className="max-h-60 overflow-y-auto">
-                {searchResults.map((result, index) => (
-                  <li
-                    key={index}
-                    className="cursor-pointer border-b p-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
-                    onClick={() => {
-                      setPlaceName(result.name);
-                      setAddress(result.roadAddress || result.address);
-                      setShowResults(false);
-                    }}
-                  >
-                    <div className="font-medium">{result.name}</div>
-                    <div className="text-xs text-gray-500">
-                      {result.roadAddress || result.address}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
+            <button
+              id="searchButton"
+              type="button"
+              className="rounded-md bg-gray-700 px-4 py-2 text-white transition-colors hover:bg-gray-600 dark:bg-gray-800 dark:hover:bg-gray-700"
+              disabled={isSearching}
+              onClick={() => {
+                if (!placeName.trim()) {
+                  alert("장소명을 입력해주세요.");
+                  return;
+                }
+                setIsSearching(true);
+                setShowResults(true);
 
-        {/* 태그 선택 */}
-        <div>
-          <label className="mb-3 block text-sm font-medium">
-            태그 선택{" "}
-            <span className="text-muted-foreground">(여러 개 선택 가능)</span>
-          </label>
-          <div className="flex flex-wrap gap-2">
-            {tags.map((tag, index) => {
-              // 태그 인덱스에 따라 색상 세트를 순환하며 적용
-              const colorIndex = index % colorSets.length;
-              const style = colorSets[colorIndex];
+                const formData = new FormData();
+                formData.append("placeName", placeName);
+                formData.append("intent", "search");
 
-              // 태그가 선택되었는지 확인 (문자열로 변환하여 비교)
-              const isSelected = selectedTags.some(
-                (t) => t.id === String(tag.id),
-              );
-
-              return (
-                <Badge
-                  key={tag.id}
-                  variant="outline"
-                  className={`rounded-full ${style.border} ${style.bg} px-3 py-1 ${style.text} ${style.hover} cursor-pointer transition-all ${isSelected ? "ring-primary font-semibold ring-2 ring-offset-1" : "opacity-80"} `}
-                  onClick={() => toggleTag(tag)}
-                >
-                  {tag.name}
-                  {isSelected && <span className="ml-1">✓</span>}
-                </Badge>
-              );
-            })}
+                fetcher.submit(formData, {
+                  method: "post",
+                });
+              }}
+            >
+              {isSearching ? "검색 중..." : "검색"}
+            </button>
           </div>
-          <input
-            type="hidden"
-            name="tags"
-            value={JSON.stringify(selectedTags.map((t) => t.id))}
-          />
         </div>
+
+        {/* 태그 - 레스토랑/카페인 경우에만 표시 */}
+        {['restaurant', 'cafe'].includes(placeType) && (
+          <div>
+            <label className="mb-2 block font-medium">
+              태그 <span className="text-red-500">*</span>
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {tags.map((tag) => {
+                const colorIndex = tag.id % colorSets.length;
+                const style = colorSets[colorIndex];
+                const isSelected = selectedTags.some(
+                  (t) => t.id === String(tag.id),
+                );
+
+                return (
+                  <Badge
+                    key={tag.id}
+                    variant="outline"
+                    className={`rounded-full ${style.border} ${style.bg} px-3 py-1 ${style.text} ${style.hover} cursor-pointer transition-all ${isSelected ? "ring-primary font-semibold ring-2 ring-offset-1" : "opacity-80"} `}
+                    onClick={() => toggleTag(tag)}
+                  >
+                    {tag.name}
+                    {isSelected && <span className="ml-1">✓</span>}
+                  </Badge>
+                );
+              })}
+            </div>
+            <input
+              type="hidden"
+              name="tags"
+              value={JSON.stringify(selectedTags.map((tag) => tag.id))}
+            />
+          </div>
+        )}
 
         {/* 주소 */}
         <div>
           <label htmlFor="address" className="mb-2 block font-medium">
-            주소{" "}
-            {placeType === "restaurant" ? (
+            주소{' '}
+            {['restaurant', 'cafe'].includes(placeType) ? (
               <span className="text-red-500">*</span>
             ) : (
               <span className="text-gray-500">(선택)</span>
             )}
           </label>
-
-          {placeType === "restaurant" ? (
-            /* 식당/카페인 경우 주소 검색 버튼 표시 */
-            <div>
-              <div className="flex space-x-2">
-                <input
-                  type="text"
-                  id="address"
-                  name="address"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  className={`flex-1 rounded-md border p-2 ${errors.address ? "border-red-500" : ""}`}
-                  placeholder="업소명 검색 후 주소가 자동으로 입력됩니다"
-                />
-                {errors.address && (
-                  <p className="mt-1 text-sm text-red-500">{errors.address}</p>
-                )}
-                <button
-                  type="button"
-                  className="rounded-md bg-gray-700 px-4 py-2 text-white transition-colors hover:bg-gray-600 dark:bg-gray-800 dark:hover:bg-gray-700"
-                  onClick={() => {
-                    if (!placeName.trim()) {
-                      alert("먼저 장소명을 입력하고 검색해주세요.");
-                      return;
-                    }
-                    // 장소명 검색 버튼 클릭과 동일한 효과
-                    document.getElementById("searchButton")?.click();
-                  }}
-                >
-                  주소 검색
-                </button>
-              </div>
-              <p className="mt-1 text-xs text-gray-500">
-                * 장소명 검색 시 주소가 자동으로 입력됩니다
-              </p>
-            </div>
-          ) : (
-            /* 산책로인 경우 직접 입력 안내 */
-            <div>
-              <input
-                type="text"
-                id="address"
-                name="address"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                className={`w-full rounded-md border p-2 ${errors.address ? "border-red-500" : ""}`}
-                placeholder="산책로 시작점 주소나 랜드마크를 입력해주세요"
-              />
-              {errors.address && (
-                <p className="mt-1 text-sm text-red-500">{errors.address}</p>
-              )}
-              <p className="mt-1 text-xs text-gray-500">
-                * 산책로 직접 입력은 주변 랜드마크나 지역명을 포함하여
-                입력해주세요.
-              </p>
-            </div>
+          <input
+            type="text"
+            id="address"
+            name="address"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            className="w-full rounded-md border p-2"
+            placeholder="주소를 검색하거나 직접 입력해주세요"
+            required={['restaurant', 'cafe'].includes(placeType)}
+          />
+          {errors.address && (
+            <p className="mt-1 text-sm text-red-500">{errors.address}</p>
           )}
         </div>
 
-        {/* 상세 주소 - 식당/카페인 경우에만 표시 */}
-        {placeType === "restaurant" && (
+        {/* 상세 주소 - 레스토랑/카페인 경우에만 표시 */}
+        {['restaurant', 'cafe'].includes(placeType) && (
           <div>
             <label htmlFor="detailAddress" className="mb-2 block font-medium">
               상세 주소
