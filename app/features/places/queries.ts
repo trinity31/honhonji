@@ -1,6 +1,7 @@
 import type { Database } from "database.types";
 
 import makeServerClient from "~/core/lib/supa-client.server";
+
 import { PLACE_TYPES } from "./constants";
 
 export const getRestaurants = async (request: Request) => {
@@ -48,9 +49,9 @@ export const getOtherPlaces = async (request: Request) => {
   const [client] = makeServerClient(request);
 
   // 'restaurant'와 'cafe'를 제외한 장소 타입들을 가져옵니다.
-  const otherPlaceTypeValues = PLACE_TYPES
-    .map(pt => pt.value)
-    .filter(value => value !== "restaurant" && value !== "cafe");
+  const otherPlaceTypeValues = PLACE_TYPES.map((pt) => pt.value).filter(
+    (value) => value !== "restaurant" && value !== "cafe",
+  );
 
   if (otherPlaceTypeValues.length === 0) {
     return [];
@@ -67,9 +68,9 @@ export const getOtherPlaces = async (request: Request) => {
   if (!places) return [];
 
   // 장소-태그 관계 가져오기
-  const placeIds = places.map(p => p.id);
+  const placeIds = places.map((p) => p.id);
   if (placeIds.length === 0) {
-      return places.map(place => ({ ...place, tags: [] }));
+    return places.map((place) => ({ ...place, tags: [] }));
   }
 
   const { data: placeTags, error: placeTagsError } = await client
@@ -95,4 +96,38 @@ export const getOtherPlaces = async (request: Request) => {
   });
 
   return placesWithTags;
+};
+
+export const getPlaceById = async (request: Request, placeId: number) => {
+  const [client] = makeServerClient(request);
+
+  // 장소 정보 가져오기
+  const { data: place, error: placeError } = await client
+    .from("places")
+    .select("*")
+    .eq("id", placeId)
+    .single();
+
+  if (placeError) {
+    console.error("Error fetching place:", placeError);
+    return null; // 또는 오류를 throw
+  }
+  if (!place) return null;
+
+  // 해당 장소의 태그 정보 가져오기
+  const { data: placeTags, error: placeTagsError } = await client
+    .from("place_to_tags")
+    .select(`
+      tags (id, name, category, description)
+    `)
+    .eq("place_id", placeId);
+
+  if (placeTagsError) {
+    console.error("Error fetching place tags:", placeTagsError);
+    // 태그를 가져오지 못해도 장소 정보는 반환할 수 있도록 처리
+  }
+
+  const tags = placeTags?.map(pt => pt.tags).filter(Boolean) || [];
+
+  return { ...place, tags };
 };

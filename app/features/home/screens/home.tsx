@@ -1,19 +1,10 @@
 import type { Route } from "./+types/home";
 
 import {
-  Coffee,
   Filter,
-  Leaf,
   MapPin,
-  Menu,
-  Moon,
-  Pizza,
-  Salad,
   Search,
   Star,
-  Sun,
-  Utensils,
-  Zap,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
