@@ -33,7 +33,11 @@ import i18next from "~/core/lib/i18next.server";
 import { RestaurantCard } from "~/features/home/components/restaurant-card";
 import { colorSets } from "~/features/places/constants";
 
-import { getAllTags, getRestaurants } from "../../places/queries";
+import {
+  getAllTags,
+  getOtherPlaces,
+  getRestaurants,
+} from "../../places/queries";
 import { createCustomOverlays } from "../components/custom-overlays";
 
 // 전역 카카오 타입 선언
@@ -54,17 +58,20 @@ export async function loader({ request }: Route.LoaderArgs) {
   const t = await i18next.getFixedT(request);
   const restaurants = await getRestaurants(request);
   const tags = await getAllTags(request);
+  const otherPlaces = await getOtherPlaces(request);
 
   return {
     title: t("home.title"),
     subtitle: t("home.subtitle"),
     restaurants,
     tags,
+    otherPlaces,
   };
 }
 
 export default function Home({ loaderData }: Route.ComponentProps) {
   const { t } = useTranslation();
+  const { restaurants, tags: allTagsFromLoader, otherPlaces } = loaderData; // loaderData에서 otherPlaces 추출 및 tags 이름 변경
   const mapRef = useRef<any>(null);
   const [userLocation, setUserLocation] = useState({
     lat: 37.470276,
@@ -77,12 +84,17 @@ export default function Home({ loaderData }: Route.ComponentProps) {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
   // 필터링된 식당 목록
+  // 기타 장소용 마커 이미지 URL (실제 URL로 교체 필요)
+  const MARKER_OTHER_IMAGE_SRC =
+    "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png"; // 예시: 파란색 별 마커
+  const MARKER_DEFAULT_IMAGE_SRC = ""; // 기본 카카오 마커를 사용하려면 빈 문자열 또는 null
+
   const filteredRestaurants =
     selectedTags.length > 0
-      ? loaderData.restaurants.filter((restaurant) =>
+      ? restaurants.filter((restaurant) =>
           restaurant.tags?.some((tag) => selectedTags.includes(tag.name)),
         )
-      : loaderData.restaurants;
+      : restaurants;
 
   // 태그 클릭 핸들러 - 선택/해제 토글
   const handleTagClick = (tagName: string) => {
@@ -113,21 +125,27 @@ export default function Home({ loaderData }: Route.ComponentProps) {
     nameWindowsRef.current = [];
     descWindowsRef.current = [];
 
-    // 필터링된 식당만 표시
-    filteredRestaurants.forEach((restaurant) => {
-      if (!restaurant.lat || !restaurant.lng) return;
+    // 마커 이미지 객체 생성 (이제 레스토랑/카페용)
+    const restaurantCafeMarkerImage = MARKER_OTHER_IMAGE_SRC
+      ? new window.kakao.maps.MarkerImage(
+          MARKER_OTHER_IMAGE_SRC,
+          new window.kakao.maps.Size(24, 35),
+        )
+      : null; // 기본 마커 사용 시 null
+
+    // 필터링된 식당/카페 표시
+    filteredRestaurants.forEach((place) => {
+      if (!place.lat || !place.lng) return;
 
       const marker = new window.kakao.maps.Marker({
         map: mapRef.current,
-        position: new window.kakao.maps.LatLng(restaurant.lat, restaurant.lng),
-        title: restaurant.name,
+        position: new window.kakao.maps.LatLng(place.lat, place.lng),
+        title: place.name,
+        image: restaurantCafeMarkerImage, // 레스토랑/카페에 새로운 마커 이미지 적용
       });
 
       // 커스텀 오버레이 생성
-      const { nameWindow, descWindow } = createCustomOverlays(
-        marker,
-        restaurant,
-      );
+      const { nameWindow, descWindow } = createCustomOverlays(marker, place);
 
       // 이름만 항상 보이는 InfoWindow
       nameWindow.setMap(mapRef.current);
@@ -145,6 +163,37 @@ export default function Home({ loaderData }: Route.ComponentProps) {
       });
 
       // 참조 배열에 추가
+      markersRef.current.push(marker);
+      nameWindowsRef.current.push(nameWindow);
+      descWindowsRef.current.push(descWindow);
+    });
+
+    // 기타 장소 표시 (태그 필터링 없이)
+    // TODO: otherPlaces도 태그 필터링을 적용할지 결정 필요
+    otherPlaces.forEach((place) => {
+      if (!place.lat || !place.lng) return;
+
+      const marker = new window.kakao.maps.Marker({
+        map: mapRef.current,
+        position: new window.kakao.maps.LatLng(place.lat, place.lng),
+        title: `${place.name} (기타)`,
+        // 기타 장소는 기본 카카오맵 마커를 사용 (image 속성 설정 안함)
+      });
+
+      const { nameWindow, descWindow } = createCustomOverlays(marker, place);
+
+      nameWindow.setMap(mapRef.current);
+
+      window.kakao.maps.event.addListener(marker, "click", function () {
+        nameWindow.setMap(null);
+        descWindow.setMap(mapRef.current);
+      });
+
+      window.kakao.maps.event.addListener(mapRef.current, "click", function () {
+        descWindow.setMap(null);
+        nameWindow.setMap(mapRef.current);
+      });
+
       markersRef.current.push(marker);
       nameWindowsRef.current.push(nameWindow);
       descWindowsRef.current.push(descWindow);
