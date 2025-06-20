@@ -16,17 +16,25 @@ export const submitPlace = async (
     latitude,
     longitude,
     image_url,
+    phone,
+    homepage,
+    instagram,
+    naver,
   }: {
     placeType: Database["public"]["Enums"]["place_types"];
     placeName: string;
     address?: string | null;
     detailAddress?: string | null;
-    tags?: string[]; // 문자열 태그 이름/값 배열
+    tags?: string[];
     content?: string | null;
     userId?: string | null;
     latitude?: number | null;
     longitude?: number | null;
     image_url?: string | null;
+    phone?: string | null;
+    homepage?: string | null;
+    instagram?: string | null;
+    naver?: string | null;
   },
 ) => {
   // 1. 장소 생성
@@ -43,6 +51,10 @@ export const submitPlace = async (
       lat: latitude,
       lng: longitude,
       image_url: image_url,
+      phone: phone,
+      homepage: homepage,
+      instagram: instagram,
+      naver: naver,
     })
     .select("id, name") // id만 가져와도 충분, 필요시 name도
     .single();

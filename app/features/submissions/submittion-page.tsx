@@ -94,6 +94,11 @@ const otherPlaceSchema = z.object({
   content: z.string().optional(),
   latitude: z.number().optional(),
   longitude: z.number().optional(),
+  image_url: z.string().url().optional().or(z.literal('')),
+  phone: z.string().optional(),
+  homepage: z.string().url({ message: "유효한 URL을 입력해주세요." }).optional().or(z.literal('')),
+  instagram: z.string().url({ message: "유효한 URL을 입력해주세요." }).optional().or(z.literal('')),
+  naver: z.string().url({ message: "유효한 URL을 입력해주세요." }).optional().or(z.literal('')),
 });
 
 const formSchema = z.discriminatedUnion("placeType", [
@@ -228,6 +233,14 @@ export const action = async ({ request }: Route.ActionArgs) => {
 
       console.log("Zod validation successful, submitting data with coordinates:", data);
 
+      const content = formData.get("content") as string | null;
+      const image_url = formData.get("image_url") as string | null;
+      const phone = formData.get("phone") as string | null;
+      const homepage = formData.get("homepage") as string | null;
+      const instagram = formData.get("instagram") as string | null;
+      const naver = formData.get("naver") as string | null;
+      const detailAddress = formData.get("detailAddress") as string | null;
+
       // 데이터베이스에 저장
       await submitPlace(client, {
         placeType: data.placeType, // Zod에서 추론된 타입을 사용
@@ -238,7 +251,12 @@ export const action = async ({ request }: Route.ActionArgs) => {
         userId: userId,
         latitude: data.latitude,
         longitude: data.longitude,
-        image_url: formData.get("image_url") as string | null,
+        image_url: image_url || undefined, // Ensure undefined if empty
+        phone: phone || undefined,
+        homepage: homepage || undefined,
+        instagram: instagram || undefined,
+        naver: naver || undefined,
+        detailAddress: detailAddress || undefined,
       });
 
       // 성공 응답 반환
@@ -285,6 +303,10 @@ export default function ReportPlacePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [content, setContent] = useState("");
   const [detailAddress, setDetailAddress] = useState("");
+  const [phone, setPhone] = useState("");
+  const [homepage, setHomepage] = useState("");
+  const [instagram, setInstagram] = useState("");
+  const [naver, setNaver] = useState("");
 
   const submissionProcessedRef = useRef(false);
 
@@ -305,8 +327,12 @@ export default function ReportPlacePage() {
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
+    setPhone("");
+    setHomepage("");
+    setInstagram("");
+    setNaver("");
     // isSubmitting, isSearching은 fetcher.state에 따라 별도 useEffect에서 관리
-  }, [setPlaceType, setPlaceName, setAddress, setDetailAddress, setSelectedTags, setContent, setLatitude, setLongitude, setErrors, setShowResults, setSearchResults]);
+  }, [setPlaceType, setPlaceName, setAddress, setDetailAddress, setSelectedTags, setContent, setLatitude, setLongitude, setErrors, setShowResults, setSearchResults, setPhone, setHomepage, setInstagram, setNaver]);
 
   // 폼 제출 핸들러
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -758,6 +784,70 @@ export default function ReportPlacePage() {
               <img src={imagePreview} alt="Preview" className="h-48 w-auto rounded-md object-cover" />
             </div>
           )}
+        </div>
+
+        {/* 전화번호 */}
+        <div className="space-y-1">
+          <Label htmlFor="phone" className="text-sm font-medium">
+            전화번호 <span className="text-xs text-gray-500">(선택)</span>
+          </Label>
+          <input
+            type="tel"
+            id="phone"
+            name="phone"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            className="w-full rounded-md border p-2 text-sm"
+            placeholder="02-1234-5678"
+          />
+        </div>
+
+        {/* 홈페이지 */}
+        <div className="space-y-1">
+          <Label htmlFor="homepage" className="text-sm font-medium">
+            홈페이지 <span className="text-xs text-gray-500">(선택)</span>
+          </Label>
+          <input
+            type="url"
+            id="homepage"
+            name="homepage"
+            value={homepage}
+            onChange={(e) => setHomepage(e.target.value)}
+            className="w-full rounded-md border p-2 text-sm"
+            placeholder="https://example.com"
+          />
+        </div>
+
+        {/* 인스타그램 */}
+        <div className="space-y-1">
+          <Label htmlFor="instagram" className="text-sm font-medium">
+            인스타그램 <span className="text-xs text-gray-500">(선택)</span>
+          </Label>
+          <input
+            type="url"
+            id="instagram"
+            name="instagram"
+            value={instagram}
+            onChange={(e) => setInstagram(e.target.value)}
+            className="w-full rounded-md border p-2 text-sm"
+            placeholder="https://instagram.com/username"
+          />
+        </div>
+
+        {/* 네이버 플레이스 */}
+        <div className="space-y-1">
+          <Label htmlFor="naver" className="text-sm font-medium">
+            네이버 플레이스 <span className="text-xs text-gray-500">(선택)</span>
+          </Label>
+          <input
+            type="url"
+            id="naver"
+            name="naver"
+            value={naver}
+            onChange={(e) => setNaver(e.target.value)}
+            className="w-full rounded-md border p-2 text-sm"
+            placeholder="네이버 플레이스 URL"
+          />
         </div>
 
         {/* 제출 버튼 */}
