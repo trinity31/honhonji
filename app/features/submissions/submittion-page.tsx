@@ -15,7 +15,7 @@ import {
   Wifi,
   Zap,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useFetcher, useLoaderData, useNavigation } from "react-router";
 import { z } from "zod";
 
@@ -277,6 +277,24 @@ export default function ReportPlacePage() {
   >([]);
   const [latitude, setLatitude] = useState<number | undefined>(undefined);
   const [longitude, setLongitude] = useState<number | undefined>(undefined);
+  const [content, setContent] = useState("");
+  const [detailAddress, setDetailAddress] = useState("");
+
+  const submissionProcessedRef = useRef(false);
+
+  const resetFormFields = useCallback(() => {
+    setPlaceType(PLACE_TYPES[0].value);
+    setPlaceName("");
+    setAddress("");
+    setDetailAddress("");
+    setSelectedTags([]);
+    setContent("");
+    setLatitude(undefined);
+    setLongitude(undefined);
+    setErrors({});
+    setShowResults(false);
+    setSearchResults([]);
+  }, [setPlaceType, setPlaceName, setAddress, setDetailAddress, setSelectedTags, setContent, setLatitude, setLongitude, setErrors, setShowResults, setSearchResults]);
 
   // 폼 제출 핸들러
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -317,22 +335,73 @@ export default function ReportPlacePage() {
     });
   };
 
-  // 폼 제출 결과 처리
+  // isSubmitting 및 isSearching 상태 관리, submissionProcessedRef 초기화
   useEffect(() => {
-    if (fetcher.data?.intent === "submit") {
-      setIsSubmitting(false);
+    const currentIntent = fetcher.formData?.get("intent") as string | undefined;
+    if (fetcher.state === "submitting" || fetcher.state === "loading") {
+      if (currentIntent === "submit") {
+        setIsSubmitting(true);
+        submissionProcessedRef.current = false; // 새 제출 시작 시 리셋
+      } else if (currentIntent === "search") {
+        setIsSearching(true);
+      }
+    } else {
+      // state가 idle, actionDone 등일 때
+      if (currentIntent === "submit") setIsSubmitting(false);
+      if (currentIntent === "search") setIsSearching(false);
+    }
+  }, [fetcher.state, fetcher.formData]);
 
-      if (fetcher.data.success) {
-        alert(fetcher.data.message || "제출이 완료되었습니다!");
-        // TODO: 폼 초기화 또는 페이지 이동
-      } else if (fetcher.data.errors) {
-        setErrors(fetcher.data.errors);
-      } else if (fetcher.data.error) {
-        alert(fetcher.data.error);
+  // fetcher.data 결과 처리 (제출 완료 또는 검색 결과)
+  useEffect(() => {
+    if (fetcher.state === 'idle' && fetcher.data) {
+      const { intent, success, message, errors: fetcherErrors, items } = fetcher.data as FetcherData;
+
+      if (intent === "submit") {
+        if (!submissionProcessedRef.current) {
+          if (success) {
+            alert(message || "추천을 완료했습니다.");
+            resetFormFields();
+          } else {
+            if (fetcherErrors) {
+              setErrors(fetcherErrors);
+            }
+            alert(message || fetcher.data.error || "오류가 발생했습니다.");
+          }
+          submissionProcessedRef.current = true;
+        }
+      } else if (intent === "search") {
+        if (items) {
+          const mappedItems = items.map(item => ({
+            name: item.title || "", 
+            address: item.address || "", 
+            roadAddress: item.roadAddress || "",
+          }));
+          setSearchResults(mappedItems);
+        } else if (fetcher.data.error) {
+          console.error("Search error:", fetcher.data.error);
+          setSearchResults([]);
+        }
       }
     }
-  }, [fetcher.data]);
+  }, [fetcher.data, fetcher.state, resetFormFields]);
 
+  // 기존 fetcher.data 처리 로직은 위의 useEffect로 통합되었으므로 삭제 또는 주석 처리합니다.
+  // useEffect(() => {
+  //   if (fetcher.data?.intent === "submitPlace") {
+  //     setIsSubmitting(false);
+  //     if (fetcher.data.success) {
+  //       alert(fetcher.data.message || "추천을 완료했습니다.");
+  //       resetFormFields();
+  //     } else if (fetcher.data.errors) {
+  //       setErrors(fetcher.data.errors);
+  //     } else if (fetcher.data.error) {
+  //       alert(`오류: ${fetcher.data.error}`);
+  //     }
+  //   }
+  // }, [fetcher.data, resetFormFields]);
+
+  // ...
   // 장소 타입 변경 핸들러
   const handlePlaceTypeChange = (type: PlaceType) => {
     setPlaceType(type);
@@ -596,6 +665,8 @@ export default function ReportPlacePage() {
               type="text"
               id="detailAddress"
               name="detailAddress"
+              value={detailAddress}
+              onChange={(e) => setDetailAddress(e.target.value)}
               className="w-full rounded-md border p-2"
               placeholder="상세 주소가 있는 경우 입력해 주세요(선택)"
             />
@@ -611,6 +682,8 @@ export default function ReportPlacePage() {
             id="content"
             name="content"
             rows={4}
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
             className="w-full rounded-md border p-2"
             placeholder="왜 이 장소를 추천하고 싶은지 간단히 써 주세요"
           ></textarea>
