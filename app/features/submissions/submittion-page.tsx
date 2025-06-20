@@ -66,6 +66,40 @@ const restaurantSchema = z.object({
   content: z.string().optional(),
   latitude: z.number().optional(),
   longitude: z.number().optional(),
+  image_url: z.string().url().optional().or(z.literal('')),
+  phone: z.string().optional(),
+  homepage: z.string().url({ message: "유효한 URL을 입력해주세요." }).optional().or(z.literal('')),
+  instagram: z
+    .string()
+    .optional()
+    .transform((val) => {
+      if (val === undefined || val === null || val.trim() === "") return "";
+      let username = val.trim();
+      if (username.startsWith("@")) {
+        username = username.substring(1);
+      }
+      const urlPattern = /^(https?:\/\/)?(www\.)?instagram\.com\/([a-zA-Z0-9._]+)\/?/;
+      const match = username.match(urlPattern);
+      if (match && match[3]) {
+        username = match[3];
+      }
+      return username;
+    })
+    .refine(
+      (username) => {
+        if (username === "") return true;
+        return /^[a-zA-Z0-9._]{1,30}$/.test(username);
+      },
+      {
+        message: "인스타그램 계정 형식이 올바르지 않습니다. 계정 아이디만 입력하거나 유효한 인스타그램 URL을 입력해주세요.",
+      }
+    )
+    .transform((username) => {
+      if (username === "") return "";
+      return `https://www.instagram.com/${username}/`;
+    })
+    .or(z.literal("")),
+  naver: z.string().url({ message: "유효한 URL을 입력해주세요." }).optional().or(z.literal(''))
 });
 
 const cafeSchema = z.object({
@@ -77,6 +111,40 @@ const cafeSchema = z.object({
   content: z.string().optional(),
   latitude: z.number().optional(),
   longitude: z.number().optional(),
+  image_url: z.string().url().optional().or(z.literal('')),
+  phone: z.string().optional(),
+  homepage: z.string().url({ message: "유효한 URL을 입력해주세요." }).optional().or(z.literal('')),
+  instagram: z
+    .string()
+    .optional()
+    .transform((val) => {
+      if (val === undefined || val === null || val.trim() === "") return "";
+      let username = val.trim();
+      if (username.startsWith("@")) {
+        username = username.substring(1);
+      }
+      const urlPattern = /^(https?:\/\/)?(www\.)?instagram\.com\/([a-zA-Z0-9._]+)\/?/;
+      const match = username.match(urlPattern);
+      if (match && match[3]) {
+        username = match[3];
+      }
+      return username;
+    })
+    .refine(
+      (username) => {
+        if (username === "") return true;
+        return /^[a-zA-Z0-9._]{1,30}$/.test(username);
+      },
+      {
+        message: "인스타그램 계정 형식이 올바르지 않습니다. 계정 아이디만 입력하거나 유효한 인스타그램 URL을 입력해주세요.",
+      }
+    )
+    .transform((username) => {
+      if (username === "") return "";
+      return `https://www.instagram.com/${username}/`;
+    })
+    .or(z.literal("")),
+  naver: z.string().url({ message: "유효한 URL을 입력해주세요." }).optional().or(z.literal(''))
 });
 
 // 기타 장소 타입 스키마 (태그 선택사항, 주소 선택사항)
@@ -97,7 +165,36 @@ const otherPlaceSchema = z.object({
   image_url: z.string().url().optional().or(z.literal('')),
   phone: z.string().optional(),
   homepage: z.string().url({ message: "유효한 URL을 입력해주세요." }).optional().or(z.literal('')),
-  instagram: z.string().url({ message: "유효한 URL을 입력해주세요." }).optional().or(z.literal('')),
+  instagram: z
+    .string()
+    .optional()
+    .transform((val) => {
+      if (val === undefined || val === null || val.trim() === "") return "";
+      let username = val.trim();
+      if (username.startsWith("@")) {
+        username = username.substring(1);
+      }
+      const urlPattern = /^(https?:\/\/)?(www\.)?instagram\.com\/([a-zA-Z0-9._]+)\/?/;
+      const match = username.match(urlPattern);
+      if (match && match[3]) {
+        username = match[3];
+      }
+      return username;
+    })
+    .refine(
+      (username) => {
+        if (username === "") return true;
+        return /^[a-zA-Z0-9._]{1,30}$/.test(username);
+      },
+      {
+        message: "인스타그램 계정 형식이 올바르지 않습니다. 계정 아이디만 입력하거나 유효한 인스타그램 URL을 입력해주세요.",
+      }
+    )
+    .transform((username) => {
+      if (username === "") return "";
+      return `https://www.instagram.com/${username}/`;
+    })
+    .or(z.literal("")),
   naver: z.string().url({ message: "유효한 URL을 입력해주세요." }).optional().or(z.literal('')),
 });
 
@@ -824,13 +921,13 @@ export default function ReportPlacePage() {
             인스타그램 <span className="text-xs text-gray-500">(선택)</span>
           </Label>
           <input
-            type="url"
+            type="text"
             id="instagram"
             name="instagram"
             value={instagram}
             onChange={(e) => setInstagram(e.target.value)}
             className="w-full rounded-md border p-2 text-sm"
-            placeholder="https://instagram.com/username"
+            placeholder="https://instagram.com/username 또는 계정명"
           />
         </div>
 

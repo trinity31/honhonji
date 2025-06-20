@@ -450,7 +450,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             <TabsContent value="map" className="mt-0">
               <div className="relative w-full overflow-hidden rounded-lg border shadow-lg">
                 {/* Map View */}
-                <div className="bg-muted relative aspect-[16/9] w-full md:aspect-[21/9] lg:aspect-[3/1]">
+                <div className="bg-muted relative aspect-[3/4] w-full sm:aspect-[1/1] md:aspect-[4/3] lg:aspect-[16/9]">
                   <div className="absolute inset-0">
                     <div
                       id="map"
