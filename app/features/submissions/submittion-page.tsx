@@ -16,10 +16,12 @@ import {
   Zap,
 } from "lucide-react";
 import { useEffect, useState, useRef, useCallback } from "react";
+import { createSupabaseBrowserClient } from "~/core/lib/supa-client.client";
 import { useFetcher, useLoaderData, useNavigation } from "react-router";
 import { z } from "zod";
 
 import { Badge } from "~/core/components/ui/badge";
+import { Button } from "~/core/components/ui/button";
 import { Label } from "~/core/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "~/core/components/ui/radio-group";
 import makeServerClient from "~/core/lib/supa-client.server";
@@ -236,6 +238,7 @@ export const action = async ({ request }: Route.ActionArgs) => {
         userId: userId,
         latitude: data.latitude,
         longitude: data.longitude,
+        image_url: formData.get("image_url") as string | null,
       });
 
       // 성공 응답 반환
@@ -277,6 +280,9 @@ export default function ReportPlacePage() {
   >([]);
   const [latitude, setLatitude] = useState<number | undefined>(undefined);
   const [longitude, setLongitude] = useState<number | undefined>(undefined);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [content, setContent] = useState("");
   const [detailAddress, setDetailAddress] = useState("");
 
@@ -294,16 +300,56 @@ export default function ReportPlacePage() {
     setErrors({});
     setShowResults(false);
     setSearchResults([]);
+    setImageFile(null);
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+    // isSubmitting, isSearching은 fetcher.state에 따라 별도 useEffect에서 관리
   }, [setPlaceType, setPlaceName, setAddress, setDetailAddress, setSelectedTags, setContent, setLatitude, setLongitude, setErrors, setShowResults, setSearchResults]);
 
   // 폼 제출 핸들러
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      const previewUrl = URL.createObjectURL(file);
+      setImagePreview(previewUrl);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setErrors({});
+    const formElement = e.currentTarget; // Store form element reference
     setIsSubmitting(true);
+    submissionProcessedRef.current = false;
+
+    let imageUrl = "";
+    if (imageFile) {
+      const supabase = createSupabaseBrowserClient();
+      const fileName = `${Date.now()}_${imageFile.name}`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from("places")
+        .upload(`public/${fileName}`, imageFile);
+
+      if (uploadError) {
+        console.error("Error uploading image:", uploadError);
+        alert("이미지 업로드에 실패했습니다.");
+        return;
+      }
+
+      const { data: urlData } = supabase.storage
+        .from("places")
+        .getPublicUrl(uploadData.path);
+      
+      imageUrl = urlData.publicUrl;
+    }
+
+    setErrors({});
+    // setIsSubmitting(true); // Already set at the beginning
     setShowResults(false); // 제출 시 검색 결과 숨기기
 
-    const formData = new FormData(e.currentTarget);
+    const formData = new FormData(formElement); // Use stored form element reference
     const formValues = Object.fromEntries(formData.entries()) as Record<
       string,
       string
@@ -321,6 +367,10 @@ export default function ReportPlacePage() {
 
     formData.set("address", addressValue);
     formData.set("placeType", placeType);
+
+    if (imageUrl) {
+      formData.set("image_url", imageUrl);
+    }
 
     if (['restaurant', 'cafe'].includes(placeType)) {
       formData.set("tags", JSON.stringify(selectedTags.map((tag) => tag.id)));
@@ -369,6 +419,7 @@ export default function ReportPlacePage() {
             alert(message || fetcher.data.error || "오류가 발생했습니다.");
           }
           submissionProcessedRef.current = true;
+          setIsSubmitting(false); // Reset submitting state
         }
       } else if (intent === "search") {
         if (items) {
@@ -687,6 +738,26 @@ export default function ReportPlacePage() {
             className="w-full rounded-md border p-2"
             placeholder="왜 이 장소를 추천하고 싶은지 간단히 써 주세요"
           ></textarea>
+        </div>
+
+        {/* 사진 첨부 */}
+        <div>
+          <label className="mb-2 block font-semibold">사진 첨부</label>
+          <input 
+            type="file" 
+            accept="image/*" 
+            ref={fileInputRef}
+            onChange={handleImageChange} 
+            className="hidden" 
+          />
+          <Button type="button" onClick={() => fileInputRef.current?.click()} className="mb-2">
+            이미지 선택
+          </Button>
+          {imagePreview && (
+            <div className="mt-2">
+              <img src={imagePreview} alt="Preview" className="h-48 w-auto rounded-md object-cover" />
+            </div>
+          )}
         </div>
 
         {/* 제출 버튼 */}

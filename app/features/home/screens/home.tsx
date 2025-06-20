@@ -61,8 +61,8 @@ export default function Home({ loaderData }: Route.ComponentProps) {
   const { restaurants, tags: allTagsFromLoader, otherPlaces } = loaderData; // loaderData에서 otherPlaces 추출 및 tags 이름 변경
   const mapRef = useRef<any>(null);
   const [userLocation, setUserLocation] = useState({
-    lat: 37.470276,
-    lng: 127.043191,
+    lat: 37.55838,
+    lng: 126.922449,
   }); // 기본값은 서울시청
   const rootData = useRouteLoaderData("root");
   const kakaoAppKey = rootData?.env?.KAKAO_APP_KEY || "";

@@ -15,6 +15,7 @@ export const submitPlace = async (
     userId,
     latitude,
     longitude,
+    image_url,
   }: {
     placeType: Database["public"]["Enums"]["place_types"];
     placeName: string;
@@ -25,6 +26,7 @@ export const submitPlace = async (
     userId?: string | null;
     latitude?: number | null;
     longitude?: number | null;
+    image_url?: string | null;
   },
 ) => {
   // 1. 장소 생성
@@ -40,6 +42,7 @@ export const submitPlace = async (
       status: "pending",
       lat: latitude,
       lng: longitude,
+      image_url: image_url,
     })
     .select("id, name") // id만 가져와도 충분, 필요시 name도
     .single();
