@@ -357,6 +357,23 @@ export default function ReportPlacePage() {
     });
   };
 
+  const handleSearch = () => {
+    if (!placeName.trim()) {
+      alert("장소명을 입력해주세요.");
+      return;
+    }
+    setIsSearching(true);
+    setShowResults(true);
+
+    const formData = new FormData();
+    formData.append("placeName", placeName);
+    formData.append("intent", "search");
+
+    fetcher.submit(formData, {
+      method: "post",
+    });
+  };
+
   // 검색 결과 처리
   useEffect(() => {
     if (fetcher.state === "idle" && fetcher.data?.intent === "search") {
@@ -443,6 +460,12 @@ export default function ReportPlacePage() {
                     setShowResults(false);
                   }
                 }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault(); // Prevent default form submission
+                    handleSearch(); // Call the search handler directly
+                  }
+                }}
                 className={`w-full rounded-md border p-2 ${
                   errors.placeName ? "border-red-500" : ""
                 }`}
@@ -492,26 +515,11 @@ export default function ReportPlacePage() {
             </div>
 
             <button
-              id="searchButton"
+              id="search-button"
               type="button"
               className="rounded-md bg-gray-700 px-4 py-2 text-white transition-colors hover:bg-gray-600 dark:bg-gray-800 dark:hover:bg-gray-700"
               disabled={isSearching}
-              onClick={() => {
-                if (!placeName.trim()) {
-                  alert("장소명을 입력해주세요.");
-                  return;
-                }
-                setIsSearching(true);
-                setShowResults(true);
-
-                const formData = new FormData();
-                formData.append("placeName", placeName);
-                formData.append("intent", "search");
-
-                fetcher.submit(formData, {
-                  method: "post",
-                });
-              }}
+              onClick={handleSearch}
             >
               {isSearching ? "검색 중..." : "검색"}
             </button>
@@ -569,7 +577,6 @@ export default function ReportPlacePage() {
             name="address"
             value={address}
             onChange={(e) => setAddress(e.target.value)}
-            
             className="w-full rounded-md border p-2"
             placeholder="주소를 검색하거나 직접 입력해주세요"
             required={['restaurant', 'cafe'].includes(placeType)}
