@@ -25,7 +25,7 @@ export const submitPlace = async (
     placeName: string;
     address?: string | null;
     detailAddress?: string | null;
-    tags?: string[];
+    tags?: number[];
     content?: string | null;
     userId?: string | null;
     latitude?: number | null;
@@ -50,6 +50,8 @@ export const submitPlace = async (
       status: "pending",
       lat: latitude,
       lng: longitude,
+      location:
+        latitude && longitude ? `POINT(${longitude} ${latitude})` : undefined,
       image_url: image_url,
       phone: phone,
       homepage: homepage,
@@ -71,36 +73,19 @@ export const submitPlace = async (
 
   // 2. 태그가 있는 경우 태그 연결
   if (tags && tags.length > 0) {
-    // 문자열 태그 이름/값을 ID로 변환
-    const { data: existingTags, error: fetchTagsError } = await client
-      .from("tags")
-      .select("id, name")
-      .in("name", tags); // 또는 'value' 필드를 사용한다면 .in("value", tags)
+    const tagLinks = tags.map((tagId) => ({
+      place_id: place.id,
+      tag_id: tagId,
+    }));
 
-    if (fetchTagsError) {
-      console.error("Error fetching tag IDs:", fetchTagsError);
-      // 태그 조회 실패 시 장소 생성은 성공했으므로 place 객체를 반환하거나, 부분적 성공으로 처리
-      // 여기서는 오류를 던져서 전체 트랜잭션이 롤백되도록 할 수 있음 (Supabase 함수 내에서 트랜잭션 관리 필요)
-      throw fetchTagsError;
-    }
+    const { error: linkTagError } = await client
+      .from("place_to_tags")
+      .insert(tagLinks);
 
-    if (existingTags && existingTags.length > 0) {
-      const tagLinks = existingTags.map((tag) => ({
-        place_id: place.id,
-        tag_id: tag.id, // 숫자 ID 사용
-      }));
-
-      const { error: linkTagError } = await client
-        .from("place_to_tags")
-        .insert(tagLinks);
-
-      if (linkTagError) {
-        console.error("Error linking tags to place:", linkTagError);
-        // 장소는 생성되었으나 태그 연결 실패. 처리 정책 필요.
-        throw linkTagError;
-      }
-    } else {
-      console.warn("No matching tags found in DB for names:", tags);
+    if (linkTagError) {
+      console.error("Error linking tags to place:", linkTagError);
+      // 장소는 생성되었으나 태그 연결 실패. 처리 정책 필요.
+      throw linkTagError;
     }
   }
 
