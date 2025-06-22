@@ -42,9 +42,9 @@ export const meta: Route.MetaFunction = ({ data }) => {
 
 export async function loader({ request }: Route.LoaderArgs) {
   const t = await i18next.getFixedT(request);
-  const restaurants = await getRestaurants(request);
+  const restaurants = await getRestaurants(request, 37.55838, 126.922449);
   const tags = await getAllTags(request);
-  const otherPlaces = await getOtherPlaces(request);
+  const otherPlaces = await getOtherPlaces(request, 37.55838, 126.922449);
 
   return {
     title: t("home.title"),

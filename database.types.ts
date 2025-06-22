@@ -138,6 +138,7 @@ export type Database = {
           instagram: string | null
           lat: number | null
           lng: number | null
+          location: unknown | null
           name: string
           naver: string | null
           phone: string | null
@@ -159,6 +160,7 @@ export type Database = {
           instagram?: string | null
           lat?: number | null
           lng?: number | null
+          location?: unknown | null
           name: string
           naver?: string | null
           phone?: string | null
@@ -180,6 +182,7 @@ export type Database = {
           instagram?: string | null
           lat?: number | null
           lng?: number | null
+          location?: unknown | null
           name?: string
           naver?: string | null
           phone?: string | null
@@ -320,7 +323,35 @@ export type Database = {
       }
     }
     Functions: {
-      [_ in never]: never
+      places_near_location: {
+        Args: {
+          search_lat: number
+          search_lng: number
+          search_radius_meters: number
+        }
+        Returns: {
+          address: string | null
+          created_at: string
+          description: string | null
+          homepage: string | null
+          id: number
+          image_url: string | null
+          instagram: string | null
+          lat: number | null
+          lng: number | null
+          location: unknown | null
+          name: string
+          naver: string | null
+          phone: string | null
+          roadAddress: string | null
+          source: Database["public"]["Enums"]["place_sources"]
+          stats: Json
+          status: Database["public"]["Enums"]["place_status"]
+          submitted_by: string | null
+          type: Database["public"]["Enums"]["place_types"]
+          updated_at: string
+        }[]
+      }
     }
     Enums: {
       place_sources: "user" | "admin"
