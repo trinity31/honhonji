@@ -3,7 +3,7 @@ import type { Route } from "./+types/place-detail-page";
 // useRouteLoaderData 임포트 추가
 // Removed direct Remix imports, rely on Route types from ./+types/
 import { Bookmark, Globe, Home, Instagram, MapPin, Phone } from "lucide-react";
-import { useRouteLoaderData, useFetcher } from "react-router";
+import { useFetcher, useRouteLoaderData } from "react-router";
 
 import { Badge } from "~/core/components/ui/badge";
 import { Button } from "~/core/components/ui/button";
@@ -14,11 +14,12 @@ import {
   CardHeader,
   CardTitle,
 } from "~/core/components/ui/card";
-
-import { getPlaceById } from "../queries";
-import { togglePlaceLike } from "~/features/submissions/mutations";
 import makeServerClient from "~/core/lib/supa-client.server";
 import { cn } from "~/core/lib/utils";
+import { colorSets } from "~/features/places/constants";
+import { togglePlaceLike } from "~/features/submissions/mutations";
+
+import { getPlaceById } from "../queries";
 
 export const loader = async ({ request, params }: Route.LoaderArgs) => {
   const placeId = Number(params.placeId);
@@ -27,7 +28,9 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
   }
 
   const [supabase, headers] = makeServerClient(request);
-  const { data: { session } } = await supabase.auth.getSession();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
   const profileId = session?.user?.id;
 
   const place = await getPlaceById(request, placeId);
@@ -58,7 +61,9 @@ export const action = async ({ request, params }: Route.ActionArgs) => {
   }
 
   const [supabase] = makeServerClient(request);
-  const { data: { session } } = await supabase.auth.getSession();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
   const profileId = session?.user?.id;
 
   if (!profileId) {
@@ -143,9 +148,7 @@ export default function PlaceDetailPage({ loaderData }: Route.ComponentProps) {
                 <Bookmark
                   className={cn(
                     "size-7",
-                    isLiked
-                      ? "fill-yellow-400 text-yellow-400"
-                      : "text-gray-400",
+                    isLiked ? "fill-primary text-primary" : "text-primary",
                   )}
                 />
               </Button>
@@ -157,11 +160,19 @@ export default function PlaceDetailPage({ loaderData }: Route.ComponentProps) {
 
           {place.tags && place.tags.length > 0 && (
             <div className="mb-8 flex flex-wrap gap-2">
-              {place.tags.map((tag) => (
-                <Badge key={tag.id} variant="secondary" className="text-sm">
-                  {tag.name}
-                </Badge>
-              ))}
+              {place.tags.map((tag, index) => {
+                const colorIndex = index % colorSets.length;
+                const style = colorSets[colorIndex];
+                return (
+                  <Badge
+                    key={tag.id}
+                    style={style}
+                    className="border-transparent text-sm"
+                  >
+                    {tag.name}
+                  </Badge>
+                );
+              })}
             </div>
           )}
 
@@ -196,13 +207,13 @@ export default function PlaceDetailPage({ loaderData }: Route.ComponentProps) {
                 <Instagram className="text-muted-foreground mt-1 h-5 w-5 flex-shrink-0" />
                 <a
                   href={
-                  place.instagram.startsWith("http")
-                    ? place.instagram
-                    : `https://instagram.com/${place.instagram.replace(
-                        "@",
-                        "",
-                      )}`
-                }
+                    place.instagram.startsWith("http")
+                      ? place.instagram
+                      : `https://instagram.com/${place.instagram.replace(
+                          "@",
+                          "",
+                        )}`
+                  }
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-blue-600 hover:underline"

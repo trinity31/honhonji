@@ -59,7 +59,7 @@ export function createCustomOverlays(
         display: block;
         width: 100%;
         padding: 8px 12px;
-        background-color: #007bff;
+        background-color: #fb923c;
         color: white;
         text-decoration: none;
         border-radius: 6px;

@@ -189,3 +189,63 @@ export const getPlaceById = async (request: Request, placeId: number) => {
 
   return { ...place, tags };
 };
+
+export const getRandomRestaurant = async (request: Request) => {
+  const [client] = makeServerClient(request);
+
+  // 1. 모든 승인된 식당의 총 수를 가져옵니다.
+  const { count, error: countError } = await client
+    .from("places")
+    .select("*", { count: "exact", head: true })
+    .eq("type", "restaurant")
+    .eq("status", "approved");
+
+  if (countError) {
+    console.error("Error counting restaurants:", countError);
+    throw countError;
+  }
+
+  if (count === null || count === 0) {
+    return null;
+  }
+
+  // 2. 랜덤 오프셋을 생성합니다.
+  const randomIndex = Math.floor(Math.random() * count);
+
+  // 3. 랜덤 식당 하나를 가져옵니다.
+  const { data: place, error: placeError } = await client
+    .from("places")
+    .select("*")
+    .eq("type", "restaurant")
+    .eq("status", "approved")
+    .range(randomIndex, randomIndex)
+    .single();
+
+  if (placeError) {
+    console.error("Error fetching random restaurant:", placeError);
+    throw placeError;
+  }
+
+  if (!place) {
+    return null;
+  }
+
+  // 4. 해당 장소의 태그 정보를 가져옵니다.
+  const { data: placeTags, error: placeTagsError } = await client
+    .from("place_to_tags")
+    .select("place_id, tags(id, name)")
+    .eq("place_id", place.id);
+
+  if (placeTagsError) {
+    console.error("Error fetching tags for random restaurant:", placeTagsError);
+    // 태그 오류가 있어도 식당 정보는 반환
+  }
+
+  const tags =
+    placeTags
+      ?.map((pt) => pt.tags)
+      .filter((tag): tag is { id: number; name: string } => tag !== null) || [];
+
+  return { ...place, tags };
+};
+

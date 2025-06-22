@@ -22,6 +22,7 @@ import { colorSets } from "~/features/places/constants";
 import {
   getAllTags,
   getOtherPlaces,
+  getRandomRestaurant,
   getRestaurants,
 } from "../../places/queries";
 import { createCustomOverlays } from "../components/custom-overlays";
@@ -45,6 +46,7 @@ export async function loader({ request }: Route.LoaderArgs) {
   const restaurants = await getRestaurants(request, 37.55838, 126.922449);
   const tags = await getAllTags(request);
   const otherPlaces = await getOtherPlaces(request, 37.55838, 126.922449);
+  const recommendedRestaurant = await getRandomRestaurant(request);
 
   return {
     title: t("home.title"),
@@ -52,13 +54,19 @@ export async function loader({ request }: Route.LoaderArgs) {
     restaurants,
     tags,
     otherPlaces,
+    recommendedRestaurant,
   };
 }
 
 export default function Home({ loaderData }: Route.ComponentProps) {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { restaurants, tags: allTagsFromLoader, otherPlaces } = loaderData; // loaderData에서 otherPlaces 추출 및 tags 이름 변경
+  const {
+    restaurants,
+    tags: allTagsFromLoader,
+    otherPlaces,
+    recommendedRestaurant,
+  } = loaderData;
   const mapRef = useRef<any>(null);
   const [userLocation, setUserLocation] = useState({
     lat: 37.55838,
@@ -324,11 +332,11 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                 <h1 className="text-primary text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
                   {t("home.midtitle")}
                 </h1>
-                <p className="text-foreground max-w-full text-xl font-medium whitespace-normal sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl">
+                <p className="text-foreground max-w-full text-lg font-medium whitespace-normal sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl">
                   {t("home.subtitle")}
                 </p>
               </div>
-              <div className="flex flex-col gap-2 min-[400px]:flex-row">
+              {/* <div className="flex flex-col gap-2 min-[400px]:flex-row">
                 <Button className="bg-primary hover:bg-primary/90 gap-1 text-white">
                   <MapPin className="h-4 w-4 text-white" />내 주변 식당 찾기
                 </Button>
@@ -338,42 +346,44 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                 >
                   추천 식당 둘러보기
                 </Button>
-              </div>
+              </div> */}
             </div>
             <div className="mx-auto flex w-full items-center justify-center">
-              <Card className="w-full overflow-hidden border-none p-0 shadow-lg">
-                <CardContent className="p-0">
-                  <div className="relative aspect-video overflow-hidden rounded-lg">
-                    <img
-                      src={
-                        loaderData.restaurants[0].image_url ||
-                        "/images/default-restaurant.png"
-                      }
-                      alt={loaderData.restaurants[0].name}
-                      className="h-full w-full object-cover"
-                      onError={(e) => {
-                        // 이미지 로드 실패 시 기본 이미지로 대체
-                        const target = e.target as HTMLImageElement;
-                        target.src = "/images/default-restaurant.png";
-                      }}
-                    />
-                    <div className="absolute inset-0 bg-black/30" />
-                    <div className="absolute top-4 left-4">
-                      <span className="bg-primary rounded-full px-2.5 py-1 text-xs font-semibold text-white">
-                        오늘의 추천식당
-                      </span>
+              {recommendedRestaurant && (
+                <Card
+                  className="w-full cursor-pointer overflow-hidden border-none p-0 shadow-lg transition-shadow hover:shadow-md"
+                  onClick={() =>
+                    navigate(`/places/${recommendedRestaurant.id}`)
+                  }
+                >
+                  <CardContent className="p-0">
+                    <div className="relative aspect-video overflow-hidden rounded-lg">
+                      <img
+                        src={
+                          recommendedRestaurant.image_url ||
+                          "/images/default-restaurant.png"
+                        }
+                        alt={recommendedRestaurant.name || "Restaurant image"}
+                        className="h-full w-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-black/30" />
+                      <div className="absolute top-4 left-4">
+                        <span className="bg-primary rounded-full px-2.5 py-1 text-xs font-semibold text-white">
+                          {"랜덤 추천식당"}
+                        </span>
+                      </div>
+                      <div className="absolute right-4 bottom-4 left-4">
+                        <p className="text-lg font-medium text-white">
+                          {recommendedRestaurant.name}
+                        </p>
+                        <p className="truncate text-sm text-white/80">
+                          {recommendedRestaurant.description}
+                        </p>
+                      </div>
                     </div>
-                    <div className="absolute right-4 bottom-4 left-4">
-                      <p className="text-lg font-medium text-white">
-                        {loaderData.restaurants[0].name}
-                      </p>
-                      <p className="text-sm text-white/80">
-                        {loaderData.restaurants[0].description}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           </div>
         </div>
