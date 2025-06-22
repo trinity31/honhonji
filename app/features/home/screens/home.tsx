@@ -422,7 +422,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             <h2 className="text-primary text-xl font-bold whitespace-nowrap sm:text-2xl">
               주변 혼밥 식당
             </h2>
-            <div className="flex items-center gap-1 sm:gap-2">
+            {/* <div className="flex items-center gap-1 sm:gap-2">
               <Button
                 variant="outline"
                 size="sm"
@@ -439,7 +439,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                   className="w-full min-w-[120px] rounded-md pr-2 pl-7 text-sm sm:pr-3 sm:pl-8 sm:text-base md:w-[160px] lg:w-[200px]"
                 />
               </div>
-            </div>
+            </div> */}
           </div>
 
           <Tabs defaultValue="map" className="w-full">

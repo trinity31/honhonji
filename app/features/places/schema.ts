@@ -184,6 +184,9 @@ export const placeToTags = pgTable(
 
 export const placesRelations = relations(places, ({ many }) => ({
   placesToTags: many(placeToTags),
+  placeLikes: many(placeLikes),
+  reviews: many(reviews),
+  coursePlaces: many(coursePlaces),
 }));
 
 export const tagsRelations = relations(tags, ({ many }) => ({
@@ -289,3 +292,137 @@ export const reviews = pgTable(
     }),
   ],
 );
+
+export const courses = pgTable(
+  "courses",
+  {
+    id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    name: text("name").notNull(),
+    description: text("description"),
+    profile_id: uuid("profile_id")
+      .notNull()
+      .references(() => profiles.profile_id, { onDelete: "cascade" }),
+    ...timestamps,
+  },
+  (table) => [
+    // RLS Policies for courses
+    // 📖 SELECT : public
+    pgPolicy("courses_public_select", {
+      for: "select",
+      to: "public",
+      using: sql`true`,
+    }),
+    // ✏️ INSERT : authenticated users can create their own courses
+    pgPolicy("courses_auth_insert", {
+      for: "insert",
+      to: authenticatedRole,
+      withCheck: sql`profile_id = auth.uid()`,
+    }),
+    // 🛠 UPDATE : authenticated users can update their own courses
+    pgPolicy("courses_auth_update", {
+      for: "update",
+      to: authenticatedRole,
+      using: sql`profile_id = auth.uid()`,
+      withCheck: sql`profile_id = auth.uid()`,
+    }),
+    // 🗑 DELETE : authenticated users can delete their own courses
+    pgPolicy("courses_auth_delete", {
+      for: "delete",
+      to: authenticatedRole,
+      using: sql`profile_id = auth.uid()`,
+    }),
+    // Admin full access
+    pgPolicy("courses_admin_all", {
+      for: "all",
+      to: adminRole,
+      using: sql`true`,
+      withCheck: sql`true`,
+    }),
+  ],
+);
+
+export const coursePlaces = pgTable(
+  "course_places",
+  {
+    course_id: bigint("course_id", { mode: "number" })
+      .notNull()
+      .references(() => courses.id, { onDelete: "cascade" }),
+    place_id: bigint("place_id", { mode: "number" })
+      .notNull()
+      .references(() => places.id, { onDelete: "cascade" }),
+    order: integer("order").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.course_id, table.place_id] }),
+    // RLS Policies for course_places
+    // 📖 SELECT : public
+    pgPolicy("course_places_public_select", {
+      for: "select",
+      to: "public",
+      using: sql`true`,
+    }),
+    // ✏️ INSERT : authenticated users can add places to their own courses
+    pgPolicy("course_places_auth_insert", {
+      for: "insert",
+      to: authenticatedRole,
+      withCheck: sql`EXISTS (
+        SELECT 1 FROM ${courses} 
+        WHERE ${courses}.id = ${table.course_id} 
+        AND ${courses}.profile_id = auth.uid()
+      )`,
+    }),
+    // 🛠 UPDATE : authenticated users can update places in their own courses
+    pgPolicy("course_places_auth_update", {
+      for: "update",
+      to: authenticatedRole,
+      using: sql`EXISTS (
+        SELECT 1 FROM ${courses} 
+        WHERE ${courses}.id = ${table.course_id} 
+        AND ${courses}.profile_id = auth.uid()
+      )`,
+      withCheck: sql`EXISTS (
+        SELECT 1 FROM ${courses} 
+        WHERE ${courses}.id = ${table.course_id} 
+        AND ${courses}.profile_id = auth.uid()
+      )`,
+    }),
+    // 🗑 DELETE : authenticated users can delete places from their own courses
+    pgPolicy("course_places_auth_delete", {
+      for: "delete",
+      to: authenticatedRole,
+      using: sql`EXISTS (
+        SELECT 1 FROM ${courses} 
+        WHERE ${courses}.id = ${table.course_id} 
+        AND ${courses}.profile_id = auth.uid()
+      )`,
+    }),
+    // Admin full access
+    pgPolicy("course_places_admin_all", {
+      for: "all",
+      to: adminRole,
+      using: sql`true`,
+      withCheck: sql`true`,
+    }),
+  ],
+);
+
+// Relations
+
+export const coursesRelations = relations(courses, ({ many, one }) => ({
+  coursePlaces: many(coursePlaces),
+  profile: one(profiles, {
+    fields: [courses.profile_id],
+    references: [profiles.profile_id],
+  }),
+}));
+
+export const coursePlacesRelations = relations(coursePlaces, ({ one }) => ({
+  course: one(courses, {
+    fields: [coursePlaces.course_id],
+    references: [courses.id],
+  }),
+  place: one(places, {
+    fields: [coursePlaces.place_id],
+    references: [places.id],
+  }),
+}));
