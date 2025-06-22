@@ -1,6 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "database.types";
 
+import makeServerClient from "~/core/lib/supa-client.server";
+
 // PlaceType 임포트
 
 export const submitPlace = async (
@@ -90,4 +92,52 @@ export const submitPlace = async (
   }
 
   return place;
+};
+
+export const togglePlaceLike = async (
+  request: Request,
+  placeId: number,
+  profileId: string,
+) => {
+  const [supabase] = makeServerClient(request);
+
+  // First, check if the like exists
+  const { data: existingLike, error: selectError } = await supabase
+    .from("place_likes")
+    .select("*")
+    .eq("place_id", placeId)
+    .eq("profile_id", profileId)
+    .maybeSingle();
+
+  if (selectError) {
+    console.error("Error checking for like:", selectError);
+    throw selectError;
+  }
+
+  if (existingLike) {
+    // If it exists, delete it
+    const { error: deleteError } = await supabase
+      .from("place_likes")
+      .delete()
+      .eq("place_id", placeId)
+      .eq("profile_id", profileId);
+
+    if (deleteError) {
+      console.error("Error unliking place:", deleteError);
+      throw deleteError;
+    }
+    return { liked: false };
+  } else {
+    // If it does not exist, insert it
+    const { error: insertError } = await supabase.from("place_likes").insert({
+      place_id: placeId,
+      profile_id: profileId,
+    });
+
+    if (insertError) {
+      console.error("Error liking place:", insertError);
+      throw insertError;
+    }
+    return { liked: true };
+  }
 };

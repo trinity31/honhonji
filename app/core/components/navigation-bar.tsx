@@ -91,7 +91,7 @@ function UserMenu({
         <DropdownMenuSeparator />
 
         {/* Dashboard link - admin 사용자만 표시 */}
-        {role === 'admin' && (
+        {role === "admin" && (
           <DropdownMenuItem asChild>
             <SheetClose asChild>
               <Link to="/dashboard" viewTransition>
@@ -277,14 +277,14 @@ export function NavigationBar({
           >
             홈
           </NavLink>
-          <NavLink
+          {/* <NavLink
             to="/map"
             className={({ isActive }: { isActive: boolean }) =>
               `text-sm transition-colors ${isActive ? "text-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`
             }
           >
             지도
-          </NavLink>
+          </NavLink> */}
           <NavLink
             to="/places/submission"
             className={({ isActive }: { isActive: boolean }) =>
@@ -333,7 +333,12 @@ export function NavigationBar({
             <>
               {name ? (
                 // Authenticated state with user menu
-                <UserMenu name={name} email={email} avatarUrl={avatarUrl} role={role} />
+                <UserMenu
+                  name={name}
+                  email={email}
+                  avatarUrl={avatarUrl}
+                  role={role}
+                />
               ) : (
                 // Unauthenticated state with auth buttons
                 <AuthButtons />
@@ -351,9 +356,9 @@ export function NavigationBar({
             <SheetClose asChild>
               <Link to="/">홈</Link>
             </SheetClose>
-            <SheetClose asChild>
+            {/* <SheetClose asChild>
               <Link to="/map">지도</Link>
-            </SheetClose>
+            </SheetClose> */}
             <SheetClose asChild>
               <Link to="/places/submission">장소 제보</Link>
             </SheetClose>

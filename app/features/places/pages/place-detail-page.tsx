@@ -2,10 +2,11 @@ import type { Route } from "./+types/place-detail-page";
 
 // useRouteLoaderData 임포트 추가
 // Removed direct Remix imports, rely on Route types from ./+types/
-import { Globe, Home, Instagram, MapPin, Phone } from "lucide-react";
-import { useRouteLoaderData } from "react-router";
+import { Bookmark, Globe, Home, Instagram, MapPin, Phone } from "lucide-react";
+import { useRouteLoaderData, useFetcher } from "react-router";
 
 import { Badge } from "~/core/components/ui/badge";
+import { Button } from "~/core/components/ui/button";
 import {
   Card,
   CardContent,
@@ -15,6 +16,9 @@ import {
 } from "~/core/components/ui/card";
 
 import { getPlaceById } from "../queries";
+import { togglePlaceLike } from "~/features/submissions/mutations";
+import makeServerClient from "~/core/lib/supa-client.server";
+import { cn } from "~/core/lib/utils";
 
 export const loader = async ({ request, params }: Route.LoaderArgs) => {
   const placeId = Number(params.placeId);
@@ -22,16 +26,54 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
     throw new Response("Invalid Place ID", { status: 400 });
   }
 
+  const [supabase, headers] = makeServerClient(request);
+  const { data: { session } } = await supabase.auth.getSession();
+  const profileId = session?.user?.id;
+
   const place = await getPlaceById(request, placeId);
 
   if (!place) {
     throw new Response("Place Not Found", { status: 404 });
   }
-  // kakaoAppKey는 컴포넌트에서 root loader data를 통해 가져옵니다.
-  return { place };
+
+  let isLiked = false;
+  if (profileId) {
+    const { data: like } = await supabase
+      .from("place_likes")
+      .select("place_id")
+      .eq("place_id", placeId)
+      .eq("profile_id", profileId)
+      .single();
+    isLiked = !!like;
+  }
+
+  return { place, isLiked, headers };
 };
 
 // MetaFunction은 해당 라우트의 loader 타입을 자동으로 인식합니다.
+export const action = async ({ request, params }: Route.ActionArgs) => {
+  const placeId = Number(params.placeId);
+  if (isNaN(placeId)) {
+    throw new Response("Invalid Place ID", { status: 400 });
+  }
+
+  const [supabase] = makeServerClient(request);
+  const { data: { session } } = await supabase.auth.getSession();
+  const profileId = session?.user?.id;
+
+  if (!profileId) {
+    throw new Response("User not authenticated", { status: 401 });
+  }
+
+  try {
+    const result = await togglePlaceLike(request, placeId, profileId);
+    return result;
+  } catch (error) {
+    console.error("Failed to toggle like:", error);
+    throw new Response("Failed to update like status", { status: 500 });
+  }
+};
+
 export const meta: Route.MetaFunction = ({ data }) => {
   const placeName = data?.place?.name || "Place Details";
   return [
@@ -44,12 +86,12 @@ export const meta: Route.MetaFunction = ({ data }) => {
 };
 
 export default function PlaceDetailPage({ loaderData }: Route.ComponentProps) {
-  const { place } = loaderData;
-  // KAKAO_APP_KEY는 root loader data에서 가져옵니다.
-  const rootData = useRouteLoaderData("root") as {
-    env?: { KAKAO_APP_KEY?: string };
-  }; // 타입 단언 추가
-  const kakaoAppKey = rootData?.env?.KAKAO_APP_KEY;
+  const { place, isLiked: initialIsLiked } = loaderData;
+  const rootLoaderData = useRouteLoaderData("root");
+  const kakaoAppKey = rootLoaderData?.env.KAKAO_APP_KEY;
+
+  const fetcher = useFetcher<typeof action>();
+  const isLiked = fetcher.data?.liked ?? initialIsLiked;
 
   if (!place) {
     return (
@@ -67,39 +109,54 @@ export default function PlaceDetailPage({ loaderData }: Route.ComponentProps) {
 
   return (
     <div className="container mx-auto max-w-4xl p-4 md:p-8">
-      <Card className="overflow-hidden shadow-lg">
-        <CardHeader className="p-0">
-          <div className="flex aspect-video items-center justify-center bg-gray-100">
-            {place.image_url ? (
-              <img
-                src={place.image_url}
-                alt={place.name}
-                className="h-full w-full object-cover"
-              />
-            ) : staticMapSrc ? (
-              <img
-                src={staticMapSrc}
-                alt={`Map of ${place.name}`}
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <div className="text-muted-foreground">
-                Map preview not available
-              </div>
-            )}
+      <Card className="gap-0 overflow-hidden py-0 shadow-none">
+        {place.image_url ? (
+          <img
+            src={place.image_url}
+            alt={place.name}
+            className="aspect-video w-full object-cover"
+          />
+        ) : staticMapSrc ? (
+          <img
+            src={staticMapSrc}
+            alt={`Map of ${place.name}`}
+            className="aspect-video w-full object-cover"
+          />
+        ) : (
+          <div className="text-muted-foreground flex aspect-video w-full items-center justify-center bg-gray-100">
+            Map preview not available
           </div>
-        </CardHeader>
+        )}
         <CardContent className="p-6 md:p-8">
-          <CardTitle className="mb-2 text-3xl font-extrabold tracking-tight lg:text-4xl">
-            {place.name}
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-3xl font-extrabold tracking-tight lg:text-4xl">
+              {place.name}
+            </CardTitle>
+            <fetcher.Form method="post" className="flex items-center">
+              <Button
+                type="submit"
+                variant="ghost"
+                size="icon"
+                className="rounded-full"
+                disabled={fetcher.state !== "idle"}
+              >
+                <Bookmark
+                  className={cn(
+                    "size-7",
+                    isLiked
+                      ? "fill-yellow-400 text-yellow-400"
+                      : "text-gray-400",
+                  )}
+                />
+              </Button>
+            </fetcher.Form>
+          </div>
           <CardDescription className="text-muted-foreground mb-6 text-lg">
             {place.description || "No description available."}
           </CardDescription>
 
           {place.tags && place.tags.length > 0 && (
             <div className="mb-8 flex flex-wrap gap-2">
-              {/* Removed ': any' from tag, relying on type inference from loader data */}
               {place.tags.map((tag) => (
                 <Badge key={tag.id} variant="secondary" className="text-sm">
                   {tag.name}
@@ -138,10 +195,14 @@ export default function PlaceDetailPage({ loaderData }: Route.ComponentProps) {
               <div className="flex items-start gap-4">
                 <Instagram className="text-muted-foreground mt-1 h-5 w-5 flex-shrink-0" />
                 <a
-                  href={`https://instagram.com/${place.instagram.replace(
-                    "@",
-                    "",
-                  )}`}
+                  href={
+                  place.instagram.startsWith("http")
+                    ? place.instagram
+                    : `https://instagram.com/${place.instagram.replace(
+                        "@",
+                        "",
+                      )}`
+                }
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-blue-600 hover:underline"
