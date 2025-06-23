@@ -40,7 +40,7 @@ export function createCustomOverlays(
       font-size: 14px;
       line-height: 1.5;
       color: #333;
-      min-width: 180px;
+      min-width: 200px;
     '>
       <div style='
         font-size: 16px;
@@ -55,22 +55,41 @@ export function createCustomOverlays(
         word-break: break-word;
         margin-bottom: 12px;
       '>${restaurant.description || "설명이 없습니다."}</div>
-      <button class="overlay-details-button" style='
-        display: block;
-        width: 100%;
-        padding: 8px 12px;
-        background-color: #fb923c;
-        color: white;
-        text-decoration: none;
-        border-radius: 6px;
-        text-align: center;
-        font-weight: 500;
-        font-size: 13px;
-        border: none;
-        cursor: pointer;
-      '>
-        자세히 보기
-      </button>
+      <div>
+        <button class="overlay-details-button" style='
+          display: block;
+          width: 100%;
+          padding: 8px 12px;
+          background-color: #fb923c;
+          color: white;
+          text-decoration: none;
+          border-radius: 6px;
+          text-align: center;
+          font-weight: 500;
+          font-size: 13px;
+          border: none;
+          cursor: pointer;
+          margin-bottom: 8px;
+        '>
+          자세히 보기
+        </button>
+        <button class="save-to-course-button" data-place-id="${restaurant.id}" style='
+          display: block;
+          width: 100%;
+          padding: 8px 12px;
+          background-color: #f1f5f9;
+          color: #334155;
+          text-decoration: none;
+          border-radius: 6px;
+          text-align: center;
+          font-weight: 500;
+          font-size: 13px;
+          border: 1px solid #e2e8f0;
+          cursor: pointer;
+        '>
+          코스에 저장하기
+        </button>
+      </div>
     </div>
   `;
 

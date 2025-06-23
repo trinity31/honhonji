@@ -265,6 +265,7 @@ export default function App() {
     <Sheet>
       <Dialog>
         <Outlet />
+        <Toaster />
       </Dialog>
     </Sheet>
   );

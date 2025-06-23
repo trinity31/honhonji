@@ -1,14 +1,33 @@
 import type { Route } from "./+types/home";
 
-import { Filter, MapPin, Search, Star } from "lucide-react";
+import { Filter, Loader, MapPin, Search, Star } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useFetcher } from "react-router";
 import { useNavigate, useRouteLoaderData } from "react-router";
 
 import { Badge } from "~/core/components/ui/badge";
 import { Button } from "~/core/components/ui/button";
 import { Card, CardContent } from "~/core/components/ui/card";
+import { Checkbox } from "~/core/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "~/core/components/ui/dialog";
 import { Input } from "~/core/components/ui/input";
+import { Label } from "~/core/components/ui/label";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "~/core/components/ui/sheet";
+import { Toaster, toast } from "~/core/components/ui/sonner";
 import {
   Tabs,
   TabsContent,
@@ -16,6 +35,8 @@ import {
   TabsTrigger,
 } from "~/core/components/ui/tabs";
 import i18next from "~/core/lib/i18next.server";
+import { createSupabaseBrowserClient } from "~/core/lib/supa-client.client";
+import makeServerClient from "~/core/lib/supa-client.server";
 import { RestaurantCard } from "~/features/home/components/restaurant-card";
 import { colorSets } from "~/features/places/constants";
 
@@ -25,7 +46,11 @@ import {
   getRandomRestaurant,
   getRestaurants,
 } from "../../places/queries";
+import { getLoggedInUserId } from "../../users/queries";
 import { createCustomOverlays } from "../components/custom-overlays";
+import { addPlaceToCourses, removePlaceFromCourse, createCourse } from "../mutations";
+import { getUserCourses } from "../queries";
+import { getPlaceById } from "~/features/places/queries";
 
 // 전역 카카오 타입 선언
 declare global {
@@ -47,6 +72,7 @@ export async function loader({ request }: Route.LoaderArgs) {
   const tags = await getAllTags(request);
   const otherPlaces = await getOtherPlaces(request, 37.55838, 126.922449);
   const recommendedRestaurant = await getRandomRestaurant(request);
+  const userCourses = await getUserCourses(request);
 
   return {
     title: t("home.title"),
@@ -55,17 +81,178 @@ export async function loader({ request }: Route.LoaderArgs) {
     tags,
     otherPlaces,
     recommendedRestaurant,
+    userCourses,
   };
 }
+
+export const action = async ({ request }: Route.ActionArgs) => {
+  const [client, headers] = makeServerClient(request);
+  const formData = await request.formData();
+  const intent = formData.get("intent");
+
+  // Helper function to return responses with proper headers
+  const jsonResponse = (data: any, init?: ResponseInit) => {
+    return new Response(JSON.stringify(data), {
+      ...init,
+      headers: {
+        ...init?.headers,
+        "Content-Type": "application/json",
+        ...Object.fromEntries(headers.entries()),
+      },
+    });
+  };
+
+  if (intent === "create-course") {
+    const title = formData.get("title") as string;
+    const description = formData.get("description") as string;
+
+    try {
+      const user = await getLoggedInUserId(client);
+
+      if (!user) {
+        throw new Error("User is not authenticated");
+      }
+
+      const newCourse = await createCourse({
+        name: title,
+        description,
+        profile_id: user,
+      });
+
+      return jsonResponse({
+        success: true,
+        intent: "create-course",
+        course: newCourse,
+      });
+    } catch (error) {
+      return jsonResponse(
+        {
+          success: false,
+          intent: "create-course",
+          message: error instanceof Error ? error.message : "Unknown error",
+        },
+        { status: 400 },
+      );
+    }
+  }
+
+  if (intent === "add-place-to-courses") {
+    const placeId = Number(formData.get("placeId"));
+    const courseIdsStr = formData.get("courseIds") as string;
+    const courseIds = JSON.parse(courseIdsStr) as number[];
+
+    if (!placeId || !courseIds?.length) {
+      return jsonResponse(
+        {
+          success: false,
+          intent: "add-place-to-courses",
+          message: "유효하지 않은 장소 또는 코스 ID입니다.",
+        },
+        { status: 400 },
+      );
+    }
+
+    try {
+      // 장소 정보 조회
+      const place = await getPlaceById(request, placeId);
+      
+      // 사용자 코스 정보 조회
+      const userCourses = await getUserCourses(request);
+      const courseNames = courseIds
+        .map(courseId => userCourses.find(course => course.id === courseId)?.name)
+        .filter(Boolean);
+
+      // client를 사용하는 대신 request를 직접 전달하여 접근하는 방식으로 변경
+      const { results, errors } = await addPlaceToCourses(courseIds, placeId);
+
+      if (errors.length > 0) {
+        return jsonResponse({
+          success: false,
+          intent: "add-place-to-courses",
+          message: "일부 코스에 장소를 추가하는데 실패했습니다.",
+          errors,
+          results,
+        });
+      }
+
+      return jsonResponse({
+        success: true,
+        intent: "add-place-to-courses",
+        message: "선택한 코스에 장소가 추가되었습니다.",
+        placeName: place?.name || "장소",
+        courseNames: courseNames,
+        results,
+      });
+    } catch (error) {
+      return jsonResponse(
+        {
+          success: false,
+          intent: "add-place-to-courses",
+          message: error instanceof Error ? error.message : "Unknown error",
+        },
+        { status: 500 },
+      );
+    }
+  }
+
+  if (intent === "remove-place-from-course") {
+    const placeId = Number(formData.get("placeId"));
+    const courseId = Number(formData.get("courseId"));
+
+    if (!placeId || !courseId) {
+      return jsonResponse(
+        {
+          success: false,
+          intent: "remove-place-from-course",
+          message: "유효하지 않은 장소 또는 코스 ID입니다.",
+        },
+        { status: 400 },
+      );
+    }
+
+    try {
+      // 장소 정보 조회
+      const place = await getPlaceById(request, placeId);
+      
+      // 사용자 코스 정보 조회
+      const userCourses = await getUserCourses(request);
+      const courseName = userCourses.find(course => course.id === courseId)?.name;
+
+      const result = await removePlaceFromCourse(courseId, placeId);
+
+      return jsonResponse({
+        success: true,
+        intent: "remove-place-from-course",
+        message: "장소가 코스에서 성공적으로 제거되었습니다.",
+        placeName: place?.name || "장소",
+        courseName: courseName || "코스",
+        result,
+      });
+    } catch (error) {
+      return jsonResponse(
+        {
+          success: false,
+          intent: "remove-place-from-course",
+          message: error instanceof Error ? error.message : "Unknown error",
+        },
+        { status: 400 },
+      );
+    }
+  }
+
+  return null;
+};
 
 export default function Home({ loaderData }: Route.ComponentProps) {
   const navigate = useNavigate();
   const { t } = useTranslation();
+
   const {
     restaurants,
     tags: allTagsFromLoader,
     otherPlaces,
     recommendedRestaurant,
+    userCourses,
   } = loaderData;
   const mapRef = useRef<any>(null);
   const [userLocation, setUserLocation] = useState({
@@ -77,6 +264,67 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 
   // 선택된 태그 상태 관리
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [isCreateCourseDialogOpen, setIsCreateCourseDialogOpen] =
+    useState(false);
+  const [newCourseTitle, setNewCourseTitle] = useState("");
+  const [newCourseDescription, setNewCourseDescription] = useState("");
+  const [selectedCourses, setSelectedCourses] = useState<number[]>([]);
+
+  // 선택된 장소가 이미 코스에 포함되어 있는지 확인하고 체크 상태 설정
+  useEffect(() => {
+    const getPlaceInCourses = async (placeId: number) => {
+      try {
+        const client = createSupabaseBrowserClient();
+
+        // 현재 사용자의 ID 가져오기
+        const {
+          data: { user },
+          error: userError,
+        } = await client.auth.getUser();
+
+        if (userError || !user) {
+          console.error("Supabase user error:", userError);
+          return [];
+        }
+
+        // 사용자가 소유한 코스 중 해당 장소가 포함된 코스 가져오기
+        const { data, error } = await client
+          .from("course_places")
+          .select(
+            `
+            course_id,
+            courses!inner(profile_id)
+          `,
+          )
+          .eq("place_id", placeId)
+          .eq("courses.profile_id", user.id);
+
+        if (error) {
+          console.error("Error fetching course places:", error);
+          return [];
+        }
+
+        // course_id만 배열로 추출
+        return data ? data.map((item) => item.course_id) : [];
+      } catch (error) {
+        console.error("Unexpected error in getPlaceInCourses:", error);
+        return [];
+      }
+    };
+
+    const checkPlaceInCourses = async () => {
+      if (selectedPlaceId && sheetOpen) {
+        const coursesWithPlace = await getPlaceInCourses(
+          Number(selectedPlaceId),
+        );
+        setSelectedCourses(coursesWithPlace);
+      }
+    };
+
+    checkPlaceInCourses();
+  }, [selectedPlaceId, sheetOpen]);
 
   // 필터링된 식당 목록
   // 기타 장소용 마커 이미지 URL (실제 URL로 교체 필요)
@@ -99,6 +347,63 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           ? prev.filter((tag) => tag !== tagName) // 이미 선택된 태그라면 해제
           : [...prev, tagName], // 선택되지 않은 태그라면 추가
     );
+  };
+
+  const fetcher = useFetcher();
+
+  // fetcher 상태 모니터링하여 토스트 표시
+  useEffect(() => {
+    console.log("Fetcher state:", fetcher.state);
+    console.log("Fetcher data:", fetcher.data);
+    
+    if (fetcher.state === "idle" && fetcher.data) {
+      const data = fetcher.data as any;
+      console.log("Processing fetcher data:", data);
+
+      if (data.success) {
+        // 성공적으로 처리된 경우
+        if (data.intent === "add-place-to-courses") {
+          const placeName = data.placeName || "장소";
+          const courseNames = data.courseNames || [];
+          const courseNamesText = courseNames.length > 0 
+            ? courseNames.join(", ") 
+            : "선택한 코스";
+          console.log(`${placeName}이(가) ${courseNamesText}에 추가되었습니다.`);
+          toast.success(`${placeName}이(가) ${courseNamesText}에 추가되었습니다.`);
+        } else if (data.intent === "remove-place-from-course") {
+          const placeName = data.placeName || "장소";
+          const courseName = data.courseName || "코스";
+          console.log(`${placeName}이(가) ${courseName}에서 제거되었습니다.`);
+          toast.success(`${placeName}이(가) ${courseName}에서 제거되었습니다.`);
+        } else if (data.intent === "create-course") {
+          const courseName = data.course?.name || "새 코스";
+          console.log(`${courseName}이(가) 생성되었습니다.`);
+          toast.success(`${courseName}이(가) 생성되었습니다.`);
+          setIsCreateCourseDialogOpen(false);
+          setNewCourseTitle("");
+          setNewCourseDescription("");
+        }
+      } else {
+        // 오류가 발생한 경우
+        console.log("Error occurred:", data.message);
+        toast.error(data.message || "작업 중 오류가 발생했습니다.");
+      }
+    }
+  }, [fetcher.state, fetcher.data]);
+
+  const handleCreateCourse = () => {
+    fetcher.submit(
+      {
+        intent: "create-course",
+        title: newCourseTitle,
+        description: newCourseDescription,
+      },
+      { method: "POST" },
+    );
+    // Reset fields and close dialog
+    setNewCourseTitle("");
+    setNewCourseDescription("");
+    setIsCreateCourseDialogOpen(false);
   };
 
   // 마커와 오버레이 참조 저장
@@ -158,16 +463,28 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             // 이 프로퍼티는 콘솔 로그 분석 결과 오버레이의 DOM 요소를 담고 있는 것으로 보입니다.
             // SDK 업데이트 시 변경될 수 있는 불안정한 방법이지만, 현재 문제를 해결하기 위한 해결책입니다.
             const overlayElement = (descWindow as any).a;
-            const button = overlayElement?.querySelector(
+            const detailButton = overlayElement?.querySelector(
               ".overlay-details-button",
             );
-            if (button) {
-              button.addEventListener("click", (e: MouseEvent) => {
-                e.stopPropagation();
+            if (detailButton) {
+              detailButton.addEventListener("click", () => {
                 navigate(`/places/${place.id}`);
               });
-              overlaysWithListeners.add(descWindow);
             }
+
+            const saveToCourseButton = overlayElement?.querySelector(
+              ".save-to-course-button",
+            );
+
+            if (saveToCourseButton) {
+              saveToCourseButton.addEventListener("click", (e: MouseEvent) => {
+                e.preventDefault();
+                setSelectedPlaceId(String(place.id));
+                setSheetOpen(true);
+              });
+            }
+
+            overlaysWithListeners.add(overlayElement);
           }, 0);
         }
       });
@@ -552,6 +869,131 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           </Tabs>
         </div>
       </main>
+      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+        <SheetContent>
+          <SheetHeader>
+            <SheetTitle>코스에 장소 추가</SheetTitle>
+            <SheetDescription>
+              이 장소를 어떤 코스에 추가하시겠습니까?
+            </SheetDescription>
+          </SheetHeader>
+          <div className="px-4 py-0">
+            {userCourses && userCourses.length > 0 ? (
+              <div className="mb-4 space-y-1">
+                <div className="space-y-1">
+                  {userCourses.map((course: any) => (
+                    <div
+                      key={course.id}
+                      className="flex items-center space-x-2 rounded-md p-2"
+                    >
+                      <Checkbox
+                        id={`course-${course.id}`}
+                        checked={selectedCourses.includes(course.id)}
+                        onCheckedChange={async (checked: boolean) => {
+                          if (checked) {
+                            // 체크박스 체크 시 코스에 장소 추가
+                            fetcher.submit(
+                              {
+                                intent: "add-place-to-courses",
+                                placeId: selectedPlaceId,
+                                courseIds: JSON.stringify([course.id]),
+                              },
+                              { method: "POST" },
+                            );
+                            setSelectedCourses([...selectedCourses, course.id]);
+                          } else {
+                            // 체크박스 해제 시 코스에서 장소 제거
+                            fetcher.submit(
+                              {
+                                intent: "remove-place-from-course",
+                                placeId: selectedPlaceId,
+                                courseId: course.id,
+                              },
+                              { method: "POST" },
+                            );
+                            setSelectedCourses(
+                              selectedCourses.filter((id) => id !== course.id),
+                            );
+                          }
+                        }}
+                      />
+                      <Label
+                        htmlFor={`course-${course.id}`}
+                        className="flex-1 cursor-pointer text-sm"
+                      >
+                        {course.name}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+                {/* 버튼 제거됨 */}
+              </div>
+            ) : (
+              <div className="mb-4 rounded-md bg-gray-50 p-4 text-sm text-gray-500">
+                <p>아직 만든 코스가 없습니다. 새 코스를 추가해보세요.</p>
+              </div>
+            )}
+            <Button
+              onClick={() => {
+                setSheetOpen(false);
+                setIsCreateCourseDialogOpen(true);
+              }}
+              variant="default"
+              className="w-full bg-orange-500 text-white hover:bg-orange-600"
+            >
+              새 코스 추가하기
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
+      <Dialog
+        open={isCreateCourseDialogOpen}
+        onOpenChange={setIsCreateCourseDialogOpen}
+      >
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>새 코스 만들기</DialogTitle>
+            <DialogDescription>
+              새로운 코스의 제목과 설명을 입력해주세요.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="title" className="text-right">
+                제목
+              </Label>
+              <Input
+                id="title"
+                value={newCourseTitle}
+                onChange={(e) => setNewCourseTitle(e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="description" className="text-right">
+                설명
+              </Label>
+              <Input
+                id="description"
+                value={newCourseDescription}
+                onChange={(e) => setNewCourseDescription(e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsCreateCourseDialogOpen(false)}
+            >
+              취소
+            </Button>
+            <Button type="submit" onClick={handleCreateCourse}>
+              생성
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
