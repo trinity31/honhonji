@@ -293,10 +293,10 @@ export function NavigationBar({
           >
             장소 제보
           </NavLink>
-          {/* 로그인 시 대시보드 */}
+          {/* 로그인 시 내 활동 */}
           {name && (
             <NavLink
-              to="/dashboard"
+              to="/my-places"
               className={({ isActive }: { isActive: boolean }) =>
                 `text-sm transition-colors ${isActive ? "text-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`
               }
@@ -364,7 +364,7 @@ export function NavigationBar({
             </SheetClose>
             {name && (
               <SheetClose asChild>
-                <Link to="/dashboard">내 활동</Link>
+                <Link to="/my-places">내 활동</Link>
               </SheetClose>
             )}
             {name === "admin" && (
