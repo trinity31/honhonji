@@ -22,6 +22,7 @@ import makeServerClient from "~/core/lib/supa-client.server";
 import { togglePlaceLike } from "~/features/submissions/mutations";
 
 import { getBookmarkedPlaces } from "../queries";
+import { getUserCourses } from "~/features/home/queries";
 
 // 타입 정의
 type Place = {
@@ -46,8 +47,9 @@ type Place = {
 type Course = {
   id: number;
   name: string;
-  description?: string;
+  description: string | null;
   places?: Place[];
+  course_places?: { count: number }[];
 };
 
 type LoaderData = {
@@ -101,8 +103,8 @@ export const loader = async ({
     // 실제 북마크한 장소들 가져오기
     const bookmarkedPlaces = await getBookmarkedPlaces(request);
 
-    // TODO: 내 코스 데이터 가져오기 구현
-    const myCourses: Course[] = [];
+    // 실제 코스 데이터 가져오기
+    const myCourses = await getUserCourses(request);
 
     return { user, bookmarkedPlaces, myCourses };
   } catch (error) {
@@ -140,11 +142,17 @@ export default function MyPlacesPage({ loaderData }: Route.ComponentProps) {
 
       <Tabs defaultValue="bookmarks" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="bookmarks">
+          <TabsTrigger 
+            value="bookmarks"
+            className="data-[state=active]:bg-accent data-[state=active]:text-accent-foreground"
+          >
             <Bookmark className="mr-2 h-4 w-4" />
             북마크한 장소 ({filteredBookmarkedPlaces.length})
           </TabsTrigger>
-          <TabsTrigger value="courses">
+          <TabsTrigger 
+            value="courses"
+            className="data-[state=active]:bg-accent data-[state=active]:text-accent-foreground"
+          >
             <MapPin className="mr-2 h-4 w-4" />내 코스 ({myCourses.length})
           </TabsTrigger>
         </TabsList>
@@ -285,15 +293,17 @@ export default function MyPlacesPage({ loaderData }: Route.ComponentProps) {
                       </div>
                       <div className="flex items-center gap-2">
                         <Badge
-                          variant="secondary"
+                          variant="default"
                           className="flex items-center gap-1"
                         >
                           <MapPin className="h-3 w-3" />
-                          {course.places?.length || 0}개 장소
+                          {course.course_places?.[0]?.count || 0}개 장소
                         </Badge>
-                        <Button variant="ghost" size="sm">
-                          <Edit className="h-4 w-4" />
-                        </Button>
+                        <Link to={`/courses/${course.id}/edit`}>
+                          <Button variant="ghost" size="sm">
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        </Link>
                         <Button
                           variant="ghost"
                           size="sm"

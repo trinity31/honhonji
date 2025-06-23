@@ -35,7 +35,8 @@ export const getUserCourses = async (request: Request) => {
         `
         id,
         name,
-        description
+        description,
+        course_places(count)
       `,
       )
       .eq("profile_id", user.id)

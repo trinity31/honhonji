@@ -102,6 +102,9 @@ export default [
       // Routes that should only be visible to authenticated users.
       route("/logout", "features/auth/screens/logout.tsx"),
       route("/my-places", "features/places/pages/my-places.tsx"),
+      ...prefix("/courses", [
+        route("/:courseId/edit", "features/courses/pages/course-edit.tsx"),
+      ]),
     ]),
     route("/contact", "features/contact/screens/contact-us.tsx"),
     ...prefix("/payments", [
