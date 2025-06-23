@@ -10,6 +10,7 @@ import {
   Plus,
   Save,
   Search,
+  Trash2,
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -224,6 +225,23 @@ export const action = async ({ request, params }: Route.ActionArgs) => {
           .eq("course_id", courseId)
           .eq("place_id", placeIds[i]);
       }
+    } else if (actionType === "deleteCourse") {
+      // 먼저 코스에 연결된 장소들 삭제
+      await client
+        .from("course_places")
+        .delete()
+        .eq("course_id", courseId);
+
+      // 코스 삭제
+      const { error } = await client
+        .from("courses")
+        .delete()
+        .eq("id", courseId)
+        .eq("profile_id", user.id);
+
+      if (error) throw error;
+
+      return redirect("/my-places");
     }
 
     return redirect(`/${courseId}/edit`);
@@ -245,6 +263,7 @@ export default function CourseEditPage({ loaderData }: Route.ComponentProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [places, setPlaces] = useState(course.places);
   const [hasReordered, setHasReordered] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // 검색된 장소들
   const filteredAvailablePlaces = availablePlaces.filter(
@@ -333,6 +352,15 @@ export default function CourseEditPage({ loaderData }: Route.ComponentProps) {
     }
   }, [places, submitReorder, hasReordered]);
 
+  const handleDeleteCourse = () => {
+    fetcher.submit(
+      {
+        actionType: "deleteCourse",
+      },
+      { method: "post" },
+    );
+  };
+
   return (
     <DndProvider backend={HTML5Backend}>
       <Toaster />
@@ -353,6 +381,14 @@ export default function CourseEditPage({ loaderData }: Route.ComponentProps) {
               </p>
             </div>
           </div>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => setShowDeleteConfirm(true)}
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            코스 삭제
+          </Button>
         </div>
 
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
@@ -503,6 +539,26 @@ export default function CourseEditPage({ loaderData }: Route.ComponentProps) {
           <div className="text-lg font-medium text-white">저장 중...</div>
         </div>
       ) : null}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-10 bg-opacity-75 bg-gray-500">
+          <div className="mx-auto mt-20 w-96 rounded-lg bg-white p-8 shadow-lg">
+            <h2 className="mb-4 text-lg font-medium text-gray-900">
+              코스를 정말 삭제하시겠습니까?
+            </h2>
+            <p className="text-sm text-gray-600">
+              코스를 삭제하면 모든 데이터가 영구적으로 삭제됩니다.
+            </p>
+            <div className="mt-8 flex justify-end gap-4">
+              <Button variant="ghost" onClick={() => setShowDeleteConfirm(false)}>
+                취소
+              </Button>
+              <Button variant="destructive" onClick={handleDeleteCourse}>
+                삭제
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </DndProvider>
   );
 }
