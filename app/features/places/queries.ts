@@ -249,3 +249,94 @@ export const getRandomRestaurant = async (request: Request) => {
   return { ...place, tags };
 };
 
+export const getBookmarkedPlaces = async (request: Request) => {
+  const [client] = makeServerClient(request);
+
+  // 인증된 사용자 확인
+  const { data: { user }, error: userError } = await client.auth.getUser();
+  if (userError || !user) {
+    throw new Error("인증이 필요합니다.");
+  }
+
+  // 사용자가 북마크한 장소들을 가져옵니다
+  const { data: likedPlaces, error: likesError } = await client
+    .from("place_likes")
+    .select(`
+      place_id,
+      places (
+        id,
+        name,
+        type,
+        description,
+        address,
+        lat,
+        lng,
+        phone,
+        homepage,
+        instagram,
+        naver,
+        image_url,
+        created_at,
+        updated_at,
+        status
+      )
+    `)
+    .eq("profile_id", user.id);
+
+  if (likesError) {
+    console.error("Error fetching bookmarked places:", likesError);
+    throw likesError;
+  }
+
+  if (!likedPlaces || likedPlaces.length === 0) {
+    return [];
+  }
+
+  // 북마크한 장소들의 ID 목록
+  const placeIds = likedPlaces
+    .map((like) => like.places?.id)
+    .filter((id): id is number => id !== undefined);
+
+  if (placeIds.length === 0) {
+    return [];
+  }
+
+  // 각 장소의 태그 정보 가져오기
+  const { data: placeTags, error: placeTagsError } = await client
+    .from("place_to_tags")
+    .select("place_id, tags(id, name, category)")
+    .in("place_id", placeIds);
+
+  if (placeTagsError) {
+    console.error("Error fetching tags for bookmarked places:", placeTagsError);
+    // 태그 오류가 있어도 장소 정보는 반환
+  }
+
+  // 태그를 장소별로 그룹화
+  const tagsByPlaceId = new Map<number, any[]>();
+  if (placeTags) {
+    for (const pt of placeTags) {
+      if (pt.place_id === null) continue;
+      if (!tagsByPlaceId.has(pt.place_id)) {
+        tagsByPlaceId.set(pt.place_id, []);
+      }
+      if (pt.tags) {
+        tagsByPlaceId.get(pt.place_id)?.push(pt.tags);
+      }
+    }
+  }
+
+  // 장소 정보와 태그 정보를 결합
+  const bookmarkedPlacesWithTags = likedPlaces
+    .map((like) => {
+      if (!like.places) return null;
+      
+      return {
+        ...like.places,
+        tags: tagsByPlaceId.get(like.places.id) || [],
+      };
+    })
+    .filter((place): place is NonNullable<typeof place> => place !== null);
+
+  return bookmarkedPlacesWithTags;
+};
