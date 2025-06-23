@@ -225,6 +225,7 @@ export const action = async ({ request, params }: Route.ActionArgs) => {
           .eq("course_id", courseId)
           .eq("place_id", placeIds[i]);
       }
+      return redirect(`/courses/${courseId}/edit`);
     } else if (actionType === "deleteCourse") {
       // 먼저 코스에 연결된 장소들 삭제
       await client
@@ -244,7 +245,7 @@ export const action = async ({ request, params }: Route.ActionArgs) => {
       return redirect("/my-places");
     }
 
-    return redirect(`/${courseId}/edit`);
+    return redirect(`/courses/${courseId}/edit`);
   } catch (error) {
     console.error("Course edit error:", error);
     return { error: "작업을 완료할 수 없습니다." };
