@@ -23,8 +23,8 @@ export default {
   supportedLngs,
   
   // Fallback language when user's preferred language is not supported
-  // English is used as the default fallback
-  fallbackLng: "en",
+  // Korean is used as the default fallback
+  fallbackLng: "ko",
   
   // The default namespace for translations
   // All general translations are stored in the 'common' namespace
