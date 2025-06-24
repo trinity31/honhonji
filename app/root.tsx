@@ -154,7 +154,7 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation();
 
   // Set the i18next language based on the locale from the loader
-  useChangeLanguage(data?.locale ?? "en");
+  useChangeLanguage(data?.locale ?? "ko");
 
   // Detect if the current route is a pre-rendered page (blog or legal)
   // These pages require special theme handling
