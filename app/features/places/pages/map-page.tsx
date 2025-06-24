@@ -1,6 +1,6 @@
 // import { useLoaderData } from '@remix-run/react';
 // import { json, type LoaderFunctionArgs } from '@remix-run/node';
-import type { Route } from "../../map/+types/map-page";
+import type { Route } from ".react-router/types/app/features/places/pages/+types/map-page";
 
 export const loader = async ({ request }: Route.LoaderArgs) => {
   // TODO: 실제 데이터 페칭 로직 추가

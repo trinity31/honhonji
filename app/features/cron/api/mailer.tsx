@@ -18,7 +18,7 @@ import type { Route } from "./+types/mailer";
 
 import * as Sentry from "@sentry/node";
 import { data } from "react-router";
-import WelcomeEmail from "transactional-emails/emails/welcome";
+// import WelcomeEmail from "transactional-emails/emails/welcome";
 
 import resendClient from "~/core/lib/resend-client.server";
 import adminClient from "~/core/lib/supa-admin-client.server";
@@ -84,9 +84,10 @@ export async function action({ request }: Route.LoaderArgs) {
   // Process the message if one was retrieved from the queue
   if (message) {
     // Extract email details from the message
+    const emailMessage = message as unknown as { message: EmailMessage };
     const {
       message: { to, data: emailData, template },
-    } = message as { message: EmailMessage };
+    } = emailMessage;
     
     // Process different email templates
     if (template === "welcome") {
@@ -96,7 +97,8 @@ export async function action({ request }: Route.LoaderArgs) {
         from: "Supaplate <hello@supaplate.com>",
         to: [to],
         subject: "Welcome to Supaplate!",
-        react: WelcomeEmail({ profile: JSON.stringify(emailData, null, 2) }),
+        // react: WelcomeEmail({ profile: JSON.stringify(emailData, null, 2) }),
+        html: `<h1>Welcome!</h1><p>Profile: ${JSON.stringify(emailData, null, 2)}</p>`,
       });
       
       // Log any errors that occur during email sending
