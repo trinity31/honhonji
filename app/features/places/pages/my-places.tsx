@@ -100,11 +100,11 @@ export const loader = async ({
   }
 
   try {
-    // 실제 북마크한 장소들 가져오기
-    const bookmarkedPlaces = await getBookmarkedPlaces(request);
-
-    // 실제 코스 데이터 가져오기
-    const myCourses = await getUserCourses(request);
+    // 병렬로 데이터 페칭하여 로딩 시간 단축
+    const [bookmarkedPlaces, myCourses] = await Promise.all([
+      getBookmarkedPlaces(request),
+      getUserCourses(request),
+    ]);
 
     return { user, bookmarkedPlaces, myCourses };
   } catch (error) {

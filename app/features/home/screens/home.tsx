@@ -39,6 +39,7 @@ import { createSupabaseBrowserClient } from "~/core/lib/supa-client.client";
 import makeServerClient from "~/core/lib/supa-client.server";
 import { RestaurantCard } from "~/features/home/components/restaurant-card";
 import { colorSets } from "~/features/places/constants";
+import { getPlaceById } from "~/features/places/queries";
 
 import {
   getAllTags,
@@ -48,9 +49,12 @@ import {
 } from "../../places/queries";
 import { getLoggedInUserId } from "../../users/queries";
 import { createCustomOverlays } from "../components/custom-overlays";
-import { addPlaceToCourses, removePlaceFromCourse, createCourse } from "../mutations";
+import {
+  addPlaceToCourses,
+  createCourse,
+  removePlaceFromCourse,
+} from "../mutations";
 import { getUserCourses } from "../queries";
-import { getPlaceById } from "~/features/places/queries";
 
 // 전역 카카오 타입 선언
 declare global {
@@ -68,11 +72,16 @@ export const meta: Route.MetaFunction = ({ data }) => {
 
 export async function loader({ request }: Route.LoaderArgs) {
   const t = await i18next.getFixedT(request);
-  const restaurants = await getRestaurants(request, 37.55838, 126.922449);
-  const tags = await getAllTags(request);
-  const otherPlaces = await getOtherPlaces(request, 37.55838, 126.922449);
-  const recommendedRestaurant = await getRandomRestaurant(request);
-  const userCourses = await getUserCourses(request);
+
+  // 병렬로 데이터 페칭하여 로딩 시간 단축
+  const [restaurants, tags, otherPlaces, recommendedRestaurant, userCourses] =
+    await Promise.all([
+      getRestaurants(request, 37.55838, 126.922449),
+      getAllTags(request),
+      getOtherPlaces(request, 37.55838, 126.922449),
+      getRandomRestaurant(request),
+      getUserCourses(request),
+    ]);
 
   return {
     title: t("home.title"),
@@ -155,11 +164,14 @@ export const action = async ({ request }: Route.ActionArgs) => {
     try {
       // 장소 정보 조회
       const place = await getPlaceById(request, placeId);
-      
+
       // 사용자 코스 정보 조회
       const userCourses = await getUserCourses(request);
       const courseNames = courseIds
-        .map(courseId => userCourses.find(course => course.id === courseId)?.name)
+        .map(
+          (courseId) =>
+            userCourses.find((course) => course.id === courseId)?.name,
+        )
         .filter(Boolean);
 
       // client를 사용하는 대신 request를 직접 전달하여 접근하는 방식으로 변경
@@ -213,10 +225,12 @@ export const action = async ({ request }: Route.ActionArgs) => {
     try {
       // 장소 정보 조회
       const place = await getPlaceById(request, placeId);
-      
+
       // 사용자 코스 정보 조회
       const userCourses = await getUserCourses(request);
-      const courseName = userCourses.find(course => course.id === courseId)?.name;
+      const courseName = userCourses.find(
+        (course) => course.id === courseId,
+      )?.name;
 
       const result = await removePlaceFromCourse(courseId, placeId);
 
@@ -264,6 +278,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 
   // 선택된 태그 상태 관리
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [activeTab, setActiveTab] = useState("map");
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [isCreateCourseDialogOpen, setIsCreateCourseDialogOpen] =
@@ -355,7 +370,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
   useEffect(() => {
     console.log("Fetcher state:", fetcher.state);
     console.log("Fetcher data:", fetcher.data);
-    
+
     if (fetcher.state === "idle" && fetcher.data) {
       const data = fetcher.data as any;
       console.log("Processing fetcher data:", data);
@@ -365,11 +380,14 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         if (data.intent === "add-place-to-courses") {
           const placeName = data.placeName || "장소";
           const courseNames = data.courseNames || [];
-          const courseNamesText = courseNames.length > 0 
-            ? courseNames.join(", ") 
-            : "선택한 코스";
-          console.log(`${placeName}이(가) ${courseNamesText}에 추가되었습니다.`);
-          toast.success(`${placeName}이(가) ${courseNamesText}에 추가되었습니다.`);
+          const courseNamesText =
+            courseNames.length > 0 ? courseNames.join(", ") : "선택한 코스";
+          console.log(
+            `${placeName}이(가) ${courseNamesText}에 추가되었습니다.`,
+          );
+          toast.success(
+            `${placeName}이(가) ${courseNamesText}에 추가되었습니다.`,
+          );
         } else if (data.intent === "remove-place-from-course") {
           const placeName = data.placeName || "장소";
           const courseName = data.courseName || "코스";
@@ -633,10 +651,33 @@ export default function Home({ loaderData }: Route.ComponentProps) {
       // 지도 컨트롤 추가
       const zoomControl = new window.kakao.maps.ZoomControl();
       kakaoMap.addControl(zoomControl, window.kakao.maps.ControlPosition.RIGHT);
+
+      // 지도 초기화 후 마커 업데이트
+      updateMapMarkers();
     } catch (error) {
       console.error("카카오맵 초기화 중 오류 발생:", error);
     }
   };
+
+  // 탭 변경 시 지도 재초기화를 위한 useEffect 추가
+  useEffect(() => {
+    if (activeTab === "map" && window.kakao && window.kakao.maps) {
+      // 지도 탭으로 전환될 때 약간의 지연 후 지도 재초기화
+      const timer = setTimeout(() => {
+        const mapDiv = document.getElementById("map");
+        if (mapDiv && !mapRef.current) {
+          initializeMap();
+        }
+      }, 100);
+
+      return () => clearTimeout(timer);
+    } else if (activeTab === "list") {
+      // 목록 보기로 전환할 때 지도 참조 초기화
+      if (mapRef.current) {
+        mapRef.current = null;
+      }
+    }
+  }, [activeTab, userLocation]);
 
   return (
     <div className="flex min-h-screen flex-col bg-white dark:bg-slate-950">
@@ -759,7 +800,11 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             </div> */}
           </div>
 
-          <Tabs defaultValue="map" className="w-full">
+          <Tabs
+            defaultValue="map"
+            className="w-full"
+            onValueChange={setActiveTab}
+          >
             <TabsList className="bg-muted/50 mb-4">
               <TabsTrigger
                 value="map"
